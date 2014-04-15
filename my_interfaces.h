@@ -7,10 +7,17 @@ public:
     virtual void write(sc_uint<8> data) = 0;
 };
 
-class fctI : virtual public sc_interface
+class receiver_router_I : virtual public sc_interface
 {
 public:
     virtual void fct(int num) = 0;
     virtual void write_byte(int num, sc_uint<8> data) = 0;
+};
+
+class router_receiver_I : virtual public sc_interface
+{
+public:
+    virtual void fct() = 0;
+    virtual void write_byte(sc_uint<8> data) = 0;
 };
 #endif
