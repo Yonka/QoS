@@ -3,10 +3,12 @@
 #include "ctime"
 #include <vector>
 
-trafgen::trafgen(sc_module_name mn, int param = 1) : sc_module(mn), runs(param)
+trafgen::trafgen(sc_module_name mn, int param = 1, sc_time delay = sc_time(0, SC_NS)) : sc_module(mn), runs(param), delay(delay)
 {
     srand((unsigned int) time(0));
     SC_THREAD(gen_event);
+    sensitive << send_next;
+    SC_METHOD(send_byte);
     sensitive << send;
 }
 
@@ -14,20 +16,20 @@ void trafgen::gen_event()
 {
     for (int r = 0; r < runs; r++)
     {
-        vector<sc_uint<8> > packet;
+        std::vector<sc_uint<8> > packet;
+        packet.push_back(255);
         for (int i = 0; i < 19; i++)
         {
-            //x = (sc_uint<8>)rand() % 255;
             packet.push_back((sc_uint<8>)rand() % 255);
-            send_byte();
+        }
+        while (!packet.empty())
+        {
+            x = packet.back();
+            packet.pop_back();
+            send.notify(delay);
             wait();
         }
-        x = 255;
-        send_byte();
-        send_packet();
-        if (отправили_НЕ_последний_байт_пакета)
-            send.notify(timeDelay);
-        wait();
+        wait(1000, SC_NS);
     }
 }
 
@@ -35,5 +37,5 @@ void trafgen::send_byte()
 {
 //    cout << "send " << x << '\n';
     out_port->write(x);
-    send.notify(5, SC_NS);
+    send_next.notify(SC_ZERO_TIME);
 }
