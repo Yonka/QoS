@@ -12,7 +12,7 @@ router::router(sc_module_name mn, sc_time delay = sc_time(0, SC_NS)): sc_module(
     ready_to_redirect.resize(num_of_ports);
     fill_n(ready_to_redirect.begin(), num_of_ports, false);
 
-    SC_THREAD(init);
+    SC_METHOD(init);
     
     SC_METHOD(redirect);
     dont_initialize();
@@ -21,6 +21,10 @@ router::router(sc_module_name mn, sc_time delay = sc_time(0, SC_NS)): sc_module(
     SC_METHOD(fct_delayed);
     dont_initialize();
     sensitive << fct_delayed_event;
+
+    SC_METHOD(time_code_delayed);
+    dont_initialize();
+    sensitive << time_code_event;
 }
 
 void router::fct(int num, sc_time holdup)
@@ -38,6 +42,25 @@ void router::fct_delayed()
         freed_ports.pop_back();
     }
     free_port.notify();
+}
+
+void router::time_code(sc_uint<14> t)
+{
+    if (cur_time == t - 1)
+    {
+        time_code_event.notify(delay);
+    }
+    else
+        cur_time = t;
+}
+
+void router::time_code_delayed()
+{
+    cur_time++;
+    for (int i = 0; i < num_of_ports; i++)
+    {
+        fct_port[i]->time_code(cur_time);
+    }
 }
 
 void router::write_byte(int num, sc_uint<8> data)
