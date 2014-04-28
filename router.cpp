@@ -1,18 +1,10 @@
 #include "router.h"
-#include <sysc\kernel\sc_module.h>
+
 
 router::router(sc_module_name mn, sc_time delay = sc_time(0, SC_NS)): sc_module(mn), delay(delay)
 {
-    address_destination.resize(num_of_ports);
-    fill_n(address_destination.begin(), num_of_ports, -1);
-    address_source.resize(num_of_ports);
-    fill_n(address_source.begin(), num_of_ports, -1);
-    ready_to_send.resize(num_of_ports);
-    fill_n(ready_to_send.begin(), num_of_ports, false);
-    ready_to_redirect.resize(num_of_ports);
-    fill_n(ready_to_redirect.begin(), num_of_ports, false);
-
-    SC_METHOD(init);
+    init();
+    SC_METHOD(init_fct);
     
     SC_METHOD(redirect);
     dont_initialize();
@@ -25,6 +17,31 @@ router::router(sc_module_name mn, sc_time delay = sc_time(0, SC_NS)): sc_module(
     SC_METHOD(time_code_delayed);
     dont_initialize();
     sensitive << time_code_event;
+}
+
+void router::init()
+{
+    address_destination.resize(num_of_ports);
+    fill_n(address_destination.begin(), num_of_ports, -1);
+    address_source.resize(num_of_ports);
+    fill_n(address_source.begin(), num_of_ports, -1);
+    ready_to_send.resize(num_of_ports);
+    fill_n(ready_to_send.begin(), num_of_ports, false);
+    ready_to_redirect.resize(num_of_ports);
+    fill_n(ready_to_redirect.begin(), num_of_ports, false);
+
+    srand (time(NULL));
+
+    int dir;
+    for (int i = 0; i < 256; i++)
+    {
+        dir = rand() % num_of_ports;
+        while (dir == i)
+        {
+            dir = rand() % num_of_ports;
+        }
+        routing_table.push_back(dir);
+    }
 }
 
 void router::fct(int num, sc_time holdup)
@@ -57,6 +74,7 @@ void router::time_code(sc_uint<14> t)
 void router::time_code_delayed()
 {
     cur_time++;
+    cout << this->basename() << " time " << cur_time << " at " << sc_time_stamp() << "\n";
     for (int i = 0; i < num_of_ports; i++)
     {
         fct_port[i]->time_code(cur_time);
@@ -68,7 +86,9 @@ void router::write_byte(int num, sc_uint<8> data)
     cout << this->basename() << " received " << data << " on port " << num << " at " << sc_time_stamp() << "\n";
     if (address_destination[num] == -1)
     {
-        address_destination[num] = data;
+        int addr = routing_table[data];
+        address_destination[num] = addr;
+ //       cerr << data;
         fct_port[num]->fct(delay);
     }
     else
@@ -127,7 +147,7 @@ bool router::inner_connect(int x)
     return true;
 }
 
-void router::init()
+void router::init_fct()
 {
     for (int i = 0; i < num_of_ports; i++)
     {

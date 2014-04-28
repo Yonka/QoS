@@ -1,7 +1,6 @@
 #include "time_manager.h"
-#include <sysc\kernel\sc_module.h>
 
-time_manager::time_manager(sc_module_name mn) : sc_module(mn)
+time_manager::time_manager(sc_module_name mn, node* tm_node) : sc_module(mn), tm_node(tm_node) 
 {
     SC_THREAD(tick);
 
@@ -11,7 +10,7 @@ void time_manager::tick()
 {
     while (true)
     {
-        wait(1, SC_MS);
-        
+        tm_node->time_code_delayed();
+        wait(1, SC_US);
     }
 }
