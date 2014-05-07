@@ -10,7 +10,7 @@ void time_manager::tick()
 {
     while (true)
     {
-        tm_node->time_code_delayed();
-        wait(1, SC_US);
+        tm_node->new_time_code();
+        wait(1000, SC_NS);
     }
 }

@@ -9,6 +9,7 @@ trafgen::trafgen(sc_module_name mn, int param = 1, sc_time delay = sc_time(0, SC
     SC_THREAD(gen_event);
     sensitive << send_next;
     SC_METHOD(send_byte);
+    dont_initialize();
     sensitive << send;
 }
 
@@ -17,10 +18,10 @@ void trafgen::gen_event()
     for (int r = 0; r < runs; r++)
     {
         std::vector<sc_uint<8> > packet;
-        packet.push_back(255);
+        packet.push_back(EOP_SYMBOL);
         for (int i = 0; i < 19; i++)
         {
-            packet.push_back((sc_uint<8>)rand() % 255);
+            packet.push_back((sc_uint<8>)rand() % 254 + 1);
         }
         while (!packet.empty())
         {

@@ -15,8 +15,7 @@ public:
     node(sc_module_name mn, int addr, sc_time delay);
 
     virtual void write(sc_uint<8> data);
-//    virtual void writeTick(double tickValue);
-    virtual void write_byte(sc_uint<8> data);
+    virtual void write_byte(symbol s);
     virtual void fct(sc_time holdup);
     virtual void time_code(sc_uint<14> t);
     void init();
@@ -31,15 +30,14 @@ private:
     int address;
     sc_time delay;
     sc_uint<14> cur_time;
-
+    bool have_time_code_to_send;
     sc_fifo<sc_uint<8> > read_buf;
-
     bool ready_to_write;
 
     void sender();
 
     void fct_delayed();
 
-    void time_code_delayed();
+    void new_time_code();
 };
 #endif
