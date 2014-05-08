@@ -30,6 +30,10 @@ void router::init()
     ready_to_redirect.resize(num_of_ports);
     fill_n(ready_to_redirect.begin(), num_of_ports, false);
     dest_for_tc.resize(num_of_ports);
+    in_proc.resize(num_of_ports);
+    fill_n(in_proc.begin(), num_of_ports, make_pair(0, sc_time(0, SC_NS)));
+    out_proc.resize(num_of_ports);
+    fill_n(out_proc.begin(), num_of_ports, false);
 
     srand (time(NULL));
 
@@ -96,17 +100,17 @@ void router::write_byte(int num, symbol s)
     {
         if (s.addr == BROADCAST_SYMBOL)
         {
-            if (ready_to_redirect[num])
-            {
-                tmp_buf[num] = buf[num]; 
-            }
+            tmp_buf[num] = s;
+            new_data.notify();
             fill_n(dest_for_tc.begin(), num_of_ports, true);
-            dest_for_tc[num] = false;
+            dest_for_tc[num] = false;   //we already have it
         }
-        sc_time t = sc_time_stamp() + delay; 
-        buf[num] = make_pair(s, t);
-        new_data.notify(delay);
-        ready_to_redirect[num] = true;
+        else
+        {
+            ready_to_redirect[num] = true;
+            buf[num] = s;
+            new_data.notify();
+        }
     }
 
 //    buf[address[num]].write(buf[num].read());
@@ -124,46 +128,81 @@ void router::redirect()
 //    cout <<"i've been here\n";
     for (int i = 0; i < num_of_ports; i++)
     {
-        if (buf[i].second > sc_time_stamp())    //too early to send
+        if (out_proc[i] == -1  && in_proc[address_destination[i]].second > sc_time_stamp())    //too early to free ports
         {
 //            cerr << buf[i].second << " " << sc_time_stamp() << "\n";
-            sc_time t = buf[i].second - sc_time_stamp();
+            sc_time t = in_proc[address_destination[i]].second - sc_time_stamp();
             free_port.notify(t); 
             continue;
         }
-        if (buf[i].first.addr == BROADCAST_SYMBOL)
+        else if (out_proc[i] == -1)
         {
+            in_proc[address_destination[i]].first = 0;
+            out_proc[i] = 0;
+
+            fct_port[address_destination[i]]->write_byte(buf[i]);
+            fct_port[i]->fct(delay);
+            if (buf[i].data == EOP_SYMBOL)
+            {
+                address_source[address_destination[i]] = -1;
+                address_destination[i] = -1;
+            }
+        }
+        if (tmp_buf[i].t == lchar)
+        {
+            if (out_proc[i] == -1)
+                continue;
+ 
             bool freed = true;
+            out_proc[i] = 1;
+            
             for (int j = 0; j < num_of_ports; j++)
             {
-                if (dest_for_tc[j] && ready_to_send[j])
+                if (!dest_for_tc[j])
+                    continue;
+                freed = false;
+                if (ready_to_send[j] && in_proc[j].first == 0)
                 {
-                    dest_for_tc[j] = false;
+                    in_proc[j].first = 1;
+                    in_proc[j].second = sc_time_stamp() + delay;
+                    free_port.notify(delay);
                     ready_to_send[j] = false;
-                    fct_port[j]->write_byte(buf[i].first);
-                    fct_port[i]->fct(delay);
-                    freed = false;
+                    continue;
                 }
+                if (in_proc[j].first == 1 && in_proc[j].second > sc_time_stamp())
+                {
+                    free_port.notify(in_proc[j].second - sc_time_stamp());
+                    continue;
+                }
+                if (in_proc[j].first == 1)
+                {
+                    in_proc[j].first = 0;
+                    dest_for_tc[j] = false;
+                    fct_port[j]->write_byte(tmp_buf[i]);
+                    fct_port[i]->fct(delay);
+                }              
             }
             if (freed)
             {
-                buf[i] = tmp_buf[i];
+                tmp_buf[i].t = nchar;
+                out_proc[i] = 0;
             }
-            continue;
         }
         if (!inner_connect(i))
             continue;
+        in_proc[address_destination[i]].second = sc_time_stamp() + delay;
         ready_to_redirect[i] = false;
         ready_to_send[address_destination[i]] = false;
-        fct_port[address_destination[i]]->write_byte(buf[i].first);
-        fct_port[i]->fct(delay);
-        if (buf[i].first.data == EOP_SYMBOL)
-        {
-            address_source[address_destination[i]] = -1;
-            address_destination[i] = -1;
-        }
+        in_proc[address_destination[i]].first = -1;
+        out_proc[i] = -1;
+
     }
 }
+
+//void router::()
+//{
+
+//}
 
 bool router::inner_connect(int x)
 {
@@ -171,6 +210,8 @@ bool router::inner_connect(int x)
         return false;
     if (address_source[address_destination[x]] == -1)
         address_source[address_destination[x]] = x;
+    if (in_proc[address_destination[x]].first != 0 || out_proc[x] != 0)
+        return false;
     if (address_source[address_destination[x]] != x || !ready_to_send[address_destination[x]])
         return false;
     return true;

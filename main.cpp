@@ -8,6 +8,8 @@
 #include "time_manager.h"
 using namespace std;
 
+vector<vector<int> > schedule_table;
+
 int sc_main(int argc, char* argv[])
 {
     int k = 1;
@@ -19,7 +21,6 @@ int sc_main(int argc, char* argv[])
     in >> nodes;
 
     //filling schedule table
-    vector<vector<int> > schedule_table;
     schedule_table.resize(nodes);
     for (int i = 0; i < nodes; i++)
     {
@@ -36,10 +37,13 @@ int sc_main(int argc, char* argv[])
     for (int i = 0; i < nodes; i++)
     {
         int delay_traf, delay_node;
-        in >> delay_traf >> delay_node;
-
+        string name;
+        in >> delay_traf >> delay_node >> name;
+        char* a = new char[name.size()];
+        a[name.size()]=0;
+        memcpy(a,name.c_str(), name.size());
         trafgen *t0 = new trafgen("trafgen", 10, sc_time(delay_traf, SC_NS));
-        node *n0 = new node("node", i, sc_time(delay_node, SC_NS));
+        node *n0 = new node(a, i, sc_time(delay_node, SC_NS));
         (*t0).out_port(*n0);
         t.push_back(t0);
         n.push_back(n0);

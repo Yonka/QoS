@@ -10,14 +10,17 @@ using namespace std;
 class router : public sc_module, public node_router_I
 {
 private:
-    static const int num_of_ports = 3;
-    pair<symbol, sc_time> buf[num_of_ports], tmp_buf[num_of_ports]; // input buffer
+    static const int num_of_ports = 4;
+    symbol buf[num_of_ports], tmp_buf[num_of_ports]; // input buffer
+////TODO: different delays for each port
     sc_time delay;
-    vector<int> address_destination, ad2, ad3;                    // if port is sending data, then destination address, -1 otherwise 
+    vector<int> address_destination;                    // if port is sending data, then destination address, -1 otherwise 
     vector<bool> ready_to_redirect;         // port has actual data to redirect
 
     vector<int> address_source;
     vector<bool> ready_to_send;             // is an output port ready to send data (received fct)
+    vector<int> out_proc;         //is something redirecting now from this port: 0 - nothing, 1 - lchar, -1 - nchar
+    vector<pair<int, sc_time> > in_proc;
     vector<int> routing_table;
     vector<int> freed_ports;     
     vector<bool> dest_for_tc;

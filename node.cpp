@@ -9,7 +9,7 @@ node::node(sc_module_name mn, int addr, sc_time delay = sc_time(0, SC_NS)) : sc_
     
     SC_THREAD(sender);
     dont_initialize();
-    sensitive << eop;
+    sensitive << eop << fct_event;
     
     SC_METHOD(fct_delayed);
     dont_initialize();
@@ -32,17 +32,17 @@ void node::write(sc_uint<8> data)
     if (data == EOP_SYMBOL)
     {
        eop.notify();
-       cout << this->basename() << address  << " have new packet " << sc_time_stamp() << '\n';
+       cout << this->basename() << " have new packet " << sc_time_stamp() << '\n';
     }
 }
 
 void node::write_byte(symbol s)
 {
     sc_uint<8> data;
-    cout << this->basename() << address << " received " << s.data << " at " << sc_time_stamp() << "\n";
+    cout << this->basename() << " received " << s.data << " at " << sc_time_stamp() << "\n";
     if (s.data == EOP_SYMBOL)
     {
-        cout << this-> basename() << address << " received package: ";
+        cout << this-> basename() << " received package: ";
         while (read_buf.nb_read(data))
             cout << data << " ";
         cout << " at " << sc_time_stamp() << "\n";
@@ -66,7 +66,7 @@ void node::fct_delayed()
 {
     ready_to_write = true;
     fct_event.notify();
-     cout << this->basename() << address << " received fct at " << sc_time_stamp() << "\n";
+     cout << this->basename() << " received fct at " << sc_time_stamp() << "\n";
 }
 
 void node::time_code(sc_uint<14> t)
@@ -84,33 +84,37 @@ void node::new_time_code()
 }
 void node::sender()
 {
+    bool have_data_to_send = false;
+    int receiver_addr = -1; /////////////////////ok?
+//    schedule_table<vector>
     while (true)
     {
 //        wait() check if it is allowed time-slot
-        int receiver_addr = -1;
-        while (write_buf.nb_read(tmp_byte) || have_time_code_to_send)
+        symbol s;
+        if (!have_data_to_send && write_buf.nb_read(tmp_byte))
         {
-            if (!ready_to_write)
-                wait(fct_event);
-            symbol s;
-            if (have_time_code_to_send)
-            {
-                s = symbol(cur_time, BROADCAST_SYMBOL, lchar);
-                cout << this->basename() << address << " send tc" << cur_time << " at " << sc_time_stamp() << "\n";
-                have_time_code_to_send = false;
-            }
-            else
-            {
-                if (receiver_addr = -1) 
-                    receiver_addr = tmp_byte;
-                s = symbol(tmp_byte, receiver_addr, nchar);
-                cout << this->basename() << address << " send " << tmp_byte << " at " << sc_time_stamp() << "\n";
-            }
-            wait(delay * s.t);
-            fct_port->write_byte(address, s);
-            ready_to_write = false;
+            have_data_to_send = true;
+            if (receiver_addr = -1) 
+                receiver_addr = tmp_byte;
         }
-        receiver_addr = -1;
+        else if (!have_data_to_send && !write_buf.nb_read(tmp_byte))
+            receiver_addr = -1;
+        if (have_time_code_to_send) 
+        {
+            s = symbol(cur_time, BROADCAST_SYMBOL, lchar);
+            cout << this->basename() << " send tc" << cur_time << " at " << sc_time_stamp() << "\n";
+            have_time_code_to_send = false;
+        }
+        else if (have_data_to_send)
+        {
+            if (!ready_to_write || !(schedule_table[address][cur_time] == 1))
+                continue;
+            s = symbol(tmp_byte, receiver_addr, nchar);
+            cout << this->basename() << " send " << tmp_byte << " at " << sc_time_stamp() << "\n";
+        }
+        wait(delay * s.t);
+        fct_port->write_byte(address, s);
+        ready_to_write = false;
         wait();
     }
 }
