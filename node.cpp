@@ -53,7 +53,9 @@ void node::write_byte(symbol s)
 //TODO
     }
     else
+    {
         read_buf.write(data);
+    }
     fct_port->fct(address, delay);
 }
 
@@ -90,6 +92,7 @@ void node::sender()
     while (true)
     {
 //        wait() check if it is allowed time-slot
+        wait();
         symbol s;
         if (!have_data_to_send && write_buf.nb_read(tmp_byte))
         {
@@ -97,7 +100,7 @@ void node::sender()
             if (receiver_addr = -1) 
                 receiver_addr = tmp_byte;
         }
-        else if (!have_data_to_send && !write_buf.nb_read(tmp_byte))
+        else if (!have_data_to_send)
             receiver_addr = -1;
         if (have_time_code_to_send) 
         {
@@ -107,14 +110,16 @@ void node::sender()
         }
         else if (have_data_to_send)
         {
-            if (!ready_to_write || !(schedule_table[address][cur_time] == 1))
+            if (!ready_to_write /*|| !(schedule_table[address][cur_time] == 1)*/)
                 continue;
             s = symbol(tmp_byte, receiver_addr, nchar);
             cout << this->basename() << " send " << tmp_byte << " at " << sc_time_stamp() << "\n";
+            have_data_to_send = false;
         }
+        else
+            continue;
         wait(delay * s.t);
         fct_port->write_byte(address, s);
         ready_to_write = false;
-        wait();
     }
 }
