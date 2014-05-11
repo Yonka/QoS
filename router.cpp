@@ -59,7 +59,7 @@ void router::fct_delayed()
 {
     while(!freed_ports.empty())
     {
-        cout << this->basename() << " received fct from " << freed_ports.back() << " at "<< sc_time_stamp() << "\n";
+        cerr << this->basename() << " received fct from " << freed_ports.back() << " at "<< sc_time_stamp() << "\n";
         ready_to_send[freed_ports.back()] = true;
         freed_ports.pop_back();
     }
@@ -88,7 +88,7 @@ void router::fct_delayed()
 
 void router::write_byte(int num, symbol s)
 {
-    cout << this->basename() << " received " << s.data << " on port " << num << " at " << sc_time_stamp() << "\n";
+    cerr << this->basename() << " received " << s.data << " on port " << num << " at " << sc_time_stamp() << "\n";
     if (address_destination[num] == -1 && (s.addr != BROADCAST_SYMBOL))
     {
         int addr = routing_table[s.addr];
@@ -153,14 +153,12 @@ void router::redirect()
             if (out_proc[i] == -1)
                 continue;
  
-            bool freed = true;
             out_proc[i] = 1;
             
             for (int j = 0; j < num_of_ports; j++)
             {
                 if (!dest_for_tc[j])
                     continue;
-                freed = false;
                 if (ready_to_send[j] && in_proc[j].first == 0)
                 {
                     in_proc[j].first = 1;
@@ -179,18 +177,25 @@ void router::redirect()
                     in_proc[j].first = 0;
                     dest_for_tc[j] = false;
                     fct_port[j]->write_byte(tmp_buf[i]);
-                    fct_port[i]->fct(delay);
+//                    fct_port[i]->fct(delay);      //what???
                 }              
+
             }
+            bool freed = true;
+            for (int j = 0; j < num_of_ports; j++)
+                if (dest_for_tc[j])
+                    freed = false;
             if (freed)
             {
                 tmp_buf[i].t = nchar;
                 out_proc[i] = 0;
+                fct_port[i]->fct(delay);
             }
         }
         if (!inner_connect(i))
             continue;
         in_proc[address_destination[i]].second = sc_time_stamp() + delay;
+        new_data.notify(delay);
         ready_to_redirect[i] = false;
         ready_to_send[address_destination[i]] = false;
         in_proc[address_destination[i]].first = -1;

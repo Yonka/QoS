@@ -19,7 +19,7 @@ void trafgen::gen_event()
     {
         std::vector<sc_uint<8> > packet;
         packet.push_back(EOP_SYMBOL);
-        for (int i = 0; i < 19; i++)
+        for (int i = 0; i < 4; i++)
         {
             packet.push_back((sc_uint<8>)rand() % 254 + 1);
         }

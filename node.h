@@ -29,15 +29,21 @@ private:
     sc_event eop, fct_event, fct_delayed_event, time_code_event;
     int address;
     sc_time delay;
-    sc_uint<14> cur_time;
+    int cur_time;
+    sc_time m_t_tc, m_begin_time; //t_tc value, interval begining time
     bool have_time_code_to_send;
     sc_fifo<sc_uint<8> > read_buf;
-    bool ready_to_write;
+    bool ready_to_write;    //got fct?
+//    bool unhandled_time;
+    bool event1, event2;
+
+
+    void change_tc();
 
     void sender();
 
     void fct_delayed();
 
-    void new_time_code();
+    void new_time_code(int value);
 };
 #endif
