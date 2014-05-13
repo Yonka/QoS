@@ -31,26 +31,30 @@ node::node(sc_module_name mn, int addr, sc_time delay = sc_time(0, SC_NS)) : sc_
 
 void node::init()
 {
-    fct_port->fct(address, delay);
+    fct_port->fct(address);
 }
 
-void node::write(sc_uint<8> data)
+bool node::write(std::vector<sc_uint<8> > packet)
 {
 //    cout << "res " << data << " at " << sc_time_stamp() << "\n";
-    write_buf.write(data);
-    if (data == EOP_SYMBOL)
+    if (write_buf.num_free() < packet.size())
+        return false;
+    while (!packet.empty())
     {
-       eop.notify();
-       cout << this->basename() << " have new packet " << sc_time_stamp() << '\n';
+        write_buf.write(packet.back());
+        packet.pop_back();
     }
+    eop.notify();
+    cout << this->basename() << " have new packet " << sc_time_stamp() << '\n';
+    return true;    
 }
 
 void node::write_byte(symbol s)
 {
-    sc_uint<8> data;
     cerr << this->basename() << " received " << s.data << " at " << sc_time_stamp() << "\n";
     if (s.t == nchar && s.data == EOP_SYMBOL)
     {
+        sc_uint<8> data;
         cerr << this-> basename() << " received package: ";
         while (read_buf.nb_read(data))
             cerr << data << " ";
@@ -63,14 +67,14 @@ void node::write_byte(symbol s)
     }
     else
     {
-        read_buf.write(data);
+        read_buf.write(s.data);
     }
-    fct_port->fct(address, delay);
+    fct_port->fct(address);
 }
 
-void node::fct(sc_time holdup)
+void node::fct()
 {
-     fct_delayed_event.notify(FCT_SIZE * holdup);
+     fct_delayed_event.notify(FCT_SIZE * delay);
 }
 
 void node::fct_delayed()
@@ -144,9 +148,9 @@ void node::sender()
     {
 //        wait() check if it is allowed time-slot
         wait();
-//////////////////////////////////////////////////////////////////////////check it!
 
-        if (!(have_time_code_to_send || schedule_table[address][cur_time % 8] == 1 || receiver_addr != -1))
+      /////////////////////////////////////////////////////////////////check it!
+        if (!(have_time_code_to_send || schedule_table[address][cur_time % table_size] == 1 || receiver_addr != -1))
             continue;
         symbol s;
         if (!have_time_code_to_send)

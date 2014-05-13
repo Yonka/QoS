@@ -14,9 +14,9 @@ public:
     SC_HAS_PROCESS(node);
     node(sc_module_name mn, int addr, sc_time delay);
 
-    virtual void write(sc_uint<8> data);
+    virtual bool write(std::vector<sc_uint<8> > packet);
     virtual void write_byte(symbol s);
-    virtual void fct(sc_time holdup);
+    virtual void fct();
     virtual void time_code(int t);
     void init();
 
@@ -28,6 +28,8 @@ private:
     sc_uint<8> tmp_byte;
     sc_event eop, fct_event, fct_delayed_event, time_code_event;
     int address;
+    int table_size;
+
     sc_time delay;
     int cur_time, received_time;
     sc_time m_t_tc, m_t_tc_old, m_begin_time; //t_tc value, prev t_tc value, interval beginning time, 

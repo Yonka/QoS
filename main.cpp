@@ -9,22 +9,22 @@
 using namespace std;
 
 vector<vector<int> > schedule_table;
-
+vector<sc_time> delays;
 int sc_main(int argc, char* argv[])
 {
     int k = 1;
     if (argc == 2)
         k = atoi(argv[1]);
-    int nodes, tmp;
+    int nodes, tmp, table_size;
     ifstream in;
     in.open("config");
-    in >> nodes;
+    in >> nodes >> table_size;
 
     //filling schedule table
     schedule_table.resize(nodes);
     for (int i = 0; i < nodes; i++)
     {
-        for (int j = 0; j < 8; j++)
+        for (int j = 0; j < table_size; j++)
         {
             in >> tmp;
             schedule_table[i].push_back(tmp);
@@ -33,12 +33,12 @@ int sc_main(int argc, char* argv[])
 
     vector<trafgen *> t;
     vector<node *> n;
-
     for (int i = 0; i < nodes; i++)
     {
-        int delay_traf, delay_node;
+        double delay_traf, delay_node;
         string name;
         in >> delay_traf >> delay_node >> name;
+        delays.push_back(sc_time(delay_node, SC_NS));
         char* a = new char[name.size()];
         a[name.size()]=0;
         memcpy(a,name.c_str(), name.size());

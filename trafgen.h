@@ -6,10 +6,11 @@ class trafgen : public sc_module
 {
 public:
     sc_port<writeI> out_port;
-    sc_uint<8> x;
-    sc_event send, send_next;   //sending, prepare next symbol
-    int runs;
+    std::vector<sc_uint<8> > packet;
+    sc_event send, send_next;   //sending, prepare next packet
+    int runs, packet_size;
     sc_time delay;
+    bool success;
 
     SC_HAS_PROCESS(trafgen);
     

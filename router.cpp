@@ -49,10 +49,11 @@ void router::init()
     }
 }
 
-void router::fct(int num, sc_time holdup)
+void router::fct(int num)
 {
+//different delay for every node
     freed_ports.push_back(num);
-    fct_delayed_event.notify(FCT_SIZE * holdup);
+    fct_delayed_event.notify(FCT_SIZE * delays[num]);
 }
 
 void router::fct_delayed()
@@ -94,7 +95,7 @@ void router::write_byte(int num, symbol s)
         int addr = routing_table[s.addr];
         address_destination[num] = addr;
 //        cerr << data;
-        fct_port[num]->fct(delay);
+        fct_port[num]->fct();
     }
     else 
     {
@@ -146,7 +147,7 @@ void router::redirect_ports()
             out_proc[i] = 0;
 
             fct_port[address_destination[i]]->write_byte(buf[i]);
-            fct_port[i]->fct(delay);
+            fct_port[i]->fct();
             if (buf[i].data == EOP_SYMBOL)
             {
                 address_source[address_destination[i]] = -1;
@@ -173,8 +174,8 @@ void router::redirect_time()
                 if (ready_to_send[j] && in_proc[j].first == 0)
                 {
                     in_proc[j].first = 1;
-                    in_proc[j].second = sc_time_stamp() + delay;
-                    free_port.notify(delay);
+                    in_proc[j].second = sc_time_stamp() + delays[j] + delay;
+                    free_port.notify(delays[j] + delay);
                     ready_to_send[j] = false;
                     continue;
                 }
@@ -200,7 +201,7 @@ void router::redirect_time()
             {
                 tmp_buf[i].t = nchar;
                 out_proc[i] = 0;
-                fct_port[i]->fct(delay);
+                fct_port[i]->fct();
             }
         }
     }
@@ -211,8 +212,8 @@ void router::redirect_connect()
     {
         if (!inner_connect(i))
             continue;
-        in_proc[address_destination[i]].second = sc_time_stamp() + delay;
-        new_data.notify(delay);
+        in_proc[address_destination[i]].second = sc_time_stamp() + delays[address_destination[i]] + delay;
+        new_data.notify(delays[address_destination[i]] + delay);
         ready_to_redirect[i] = false;
         ready_to_send[address_destination[i]] = false;
         in_proc[address_destination[i]].first = -1;
@@ -237,6 +238,6 @@ void router::init_fct()
 {
     for (int i = 0; i < num_of_ports; i++)
     {
-        fct_port[i]->fct(delay);
+        fct_port[i]->fct();
     }
 }
