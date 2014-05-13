@@ -17,7 +17,7 @@ public:
     virtual void write(sc_uint<8> data);
     virtual void write_byte(symbol s);
     virtual void fct(sc_time holdup);
-    virtual void time_code(sc_uint<14> t);
+    virtual void time_code(int t);
     void init();
 
     sc_port<node_router_I> fct_port;
@@ -29,13 +29,13 @@ private:
     sc_event eop, fct_event, fct_delayed_event, time_code_event;
     int address;
     sc_time delay;
-    int cur_time;
-    sc_time m_t_tc, m_begin_time; //t_tc value, interval begining time
+    int cur_time, received_time;
+    sc_time m_t_tc, m_t_tc_old, m_begin_time; //t_tc value, prev t_tc value, interval beginning time, 
     bool have_time_code_to_send;
     sc_fifo<sc_uint<8> > read_buf;
     bool ready_to_write;    //got fct?
-//    bool unhandled_time;
-    bool event1, event2;
+    bool mark_h, time_h;    //tick & timer
+//    bool event1, event2;
 
 
     void change_tc();

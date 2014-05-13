@@ -33,6 +33,13 @@ private:
 //    void time_code_delayed();
 
     void redirect();
+
+    void redirect_ports();
+
+    void redirect_time();
+
+    void redirect_connect();
+
     bool inner_connect(int x);
 
     void init_fct();

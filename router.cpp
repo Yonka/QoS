@@ -125,12 +125,17 @@ void router::write_byte(int num, symbol s)
 
 void router::redirect()
 {
-//    cout <<"i've been here\n";
+    redirect_ports();
+    redirect_time();
+    redirect_connect();
+}
+
+void router::redirect_ports()
+{
     for (int i = 0; i < num_of_ports; i++)
     {
         if (out_proc[i] == -1  && in_proc[address_destination[i]].second > sc_time_stamp())    //too early to free ports
         {
-//            cerr << buf[i].second << " " << sc_time_stamp() << "\n";
             sc_time t = in_proc[address_destination[i]].second - sc_time_stamp();
             free_port.notify(t); 
             continue;
@@ -148,13 +153,19 @@ void router::redirect()
                 address_destination[i] = -1;
             }
         }
+    }
+}
+void router::redirect_time()
+{
+    for (int i = 0; i < num_of_ports; i++)
+    {
         if (tmp_buf[i].t == lchar)
         {
             if (out_proc[i] == -1)
                 continue;
- 
+
             out_proc[i] = 1;
-            
+
             for (int j = 0; j < num_of_ports; j++)
             {
                 if (!dest_for_tc[j])
@@ -177,7 +188,7 @@ void router::redirect()
                     in_proc[j].first = 0;
                     dest_for_tc[j] = false;
                     fct_port[j]->write_byte(tmp_buf[i]);
-//                    fct_port[i]->fct(delay);      //what???
+                    //                    fct_port[i]->fct(delay);      //what???
                 }              
 
             }
@@ -192,6 +203,12 @@ void router::redirect()
                 fct_port[i]->fct(delay);
             }
         }
+    }
+}
+void router::redirect_connect()
+{
+    for (int i = 0; i < num_of_ports; i++)
+    {
         if (!inner_connect(i))
             continue;
         in_proc[address_destination[i]].second = sc_time_stamp() + delay;
@@ -200,14 +217,8 @@ void router::redirect()
         ready_to_send[address_destination[i]] = false;
         in_proc[address_destination[i]].first = -1;
         out_proc[i] = -1;
-
     }
 }
-
-//void router::()
-//{
-
-//}
 
 bool router::inner_connect(int x)
 {
