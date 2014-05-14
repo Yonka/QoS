@@ -14,6 +14,6 @@ void time_manager::tick()
     {
         tm_node->new_time_code(m_tickValue);
         m_tickValue++;
-        wait(m_t_tc);
+        wait(m_t_tc * table_size);
     }
 }

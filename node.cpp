@@ -5,11 +5,15 @@ node::node(sc_module_name mn, int addr, sc_time delay = sc_time(0, SC_NS)) : sc_
     ready_to_write = false;
     have_time_code_to_send = false;
     cur_time = 0;
-    m_begin_time = sc_time(0, SC_NS);
+    m_tc_begin_time = sc_time(0, SC_NS);
     mark_h = false;
     time_h = false;
 
     m_t_tc = sc_time(100, SC_NS);
+    m_t_te = m_t_tc * table_size;
+    m_e_begin_time = SC_ZERO_TIME;
+    m_tc_begin_time = SC_ZERO_TIME;
+    time_code_event.notify(m_t_tc);
     SC_METHOD(init);
     
     SC_THREAD(sender);
@@ -92,35 +96,50 @@ void node::change_tc()
     while (true)
     {
         wait();
-        if (mark_h && !time_h)
+        if (mark_h)
         {
-            eop.notify(SC_ZERO_TIME);
             mark_h = false;
-            if (received_time > cur_time)
-                cur_time = received_time;
-            else 
+            if (m_e_begin_time == SC_ZERO_TIME)
             {
-                time_code_event.notify(m_t_tc - (sc_time_stamp() - m_begin_time));
+                m_e_begin_time = sc_time_stamp();
+                m_tc_begin_time = sc_time_stamp();
+                time_code_event.cancel();
+                time_code_event.notify(m_t_tc);
                 continue;
             }
-            m_t_tc = sc_time_stamp() - m_begin_time;
-            m_begin_time = sc_time_stamp();
-            time_code_event.notify(m_t_tc);
+            if (cur_time == table_size - 1)
+            {
+                eop.notify(SC_ZERO_TIME);
+                cur_time = 0;
+                m_t_te = sc_time_stamp() - m_e_begin_time;
+                m_t_tc = m_t_te / table_size;
+                m_tc_begin_time = sc_time_stamp();
+                m_e_begin_time = sc_time_stamp();
+                time_code_event.notify(m_t_tc);
+            }
+            else if (cur_time == 0)
+            {
+                m_t_tc += (sc_time_stamp() - m_e_begin_time) / table_size;
+                m_t_te = m_t_tc * table_size;
+                time_code_event.cancel();
+                time_code_event.notify(m_t_tc - (sc_time_stamp() - m_e_begin_time));
+            }
+            else
+            {
+                time_code_event.notify(m_t_tc - (sc_time_stamp() - m_tc_begin_time));
+            }
             continue;
         }
-        if (sc_time_stamp() == m_begin_time + m_t_tc) 
+        if (sc_time_stamp() == m_tc_begin_time + m_t_tc) 
         {
-            time_h = true;
             cur_time++;
+                m_tc_begin_time = sc_time_stamp();
+            if (cur_time == table_size)
+            {
+                cur_time = 0;
+                m_e_begin_time = sc_time_stamp();
+            }
             eop.notify(SC_ZERO_TIME);
-            m_begin_time = sc_time_stamp();
-        }
-        if (time_h && mark_h)
-        {
-            m_t_tc += sc_time_stamp() - m_begin_time;
-            time_code_event.cancel();
-            time_h = false; 
-            mark_h = false;
         }
         time_code_event.notify(m_t_tc);
     }
@@ -128,7 +147,6 @@ void node::change_tc()
 
 void node::time_code(int t)
 {
-    received_time = t;
     mark_h = true; 
     time_code_event.notify();
     cout << address << " received tc\n";
@@ -137,7 +155,7 @@ void node::time_code(int t)
 void node::new_time_code(int value)
 {
     cout << address << " send tc\n";
-    cur_time = value;
+//    cur_time = value;
     have_time_code_to_send = true;
     eop.notify();
 }

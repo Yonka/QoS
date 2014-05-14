@@ -10,12 +10,13 @@ using namespace std;
 
 vector<vector<int> > schedule_table;
 vector<sc_time> delays;
+int table_size;
 int sc_main(int argc, char* argv[])
 {
     int k = 1;
     if (argc == 2)
         k = atoi(argv[1]);
-    int nodes, tmp, table_size;
+    int nodes, tmp;
     ifstream in;
     in.open("config");
     in >> nodes >> table_size;

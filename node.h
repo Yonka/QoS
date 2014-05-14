@@ -28,11 +28,10 @@ private:
     sc_uint<8> tmp_byte;
     sc_event eop, fct_event, fct_delayed_event, time_code_event;
     int address;
-    int table_size;
 
     sc_time delay;
     int cur_time, received_time;
-    sc_time m_t_tc, m_t_tc_old, m_begin_time; //t_tc value, prev t_tc value, interval beginning time, 
+    sc_time m_t_tc, m_t_te, m_tc_begin_time, m_e_begin_time; //t_tc value, prev t_tc value, interval beginning time, 
     bool have_time_code_to_send;
     sc_fifo<sc_uint<8> > read_buf;
     bool ready_to_write;    //got fct?

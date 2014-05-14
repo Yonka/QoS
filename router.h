@@ -16,12 +16,12 @@ private:
 ////TODO: different delays for each port
     sc_time delay;
 //    vector<sc_time> delays;
-    vector<int> address_destination;                    // if port is sending data, then destination address, -1 otherwise 
+    vector<int> address_destination;        // if port is sending data, then destination address, -1 otherwise 
     vector<bool> ready_to_redirect;         // port has actual data to redirect
 
     vector<int> address_source;
     vector<bool> ready_to_send;             // is an output port ready to send data (received fct)
-    vector<int> out_proc;         //is something redirecting now from this port: 0 - nothing, 1 - lchar, -1 - nchar
+    vector<int> out_proc;                   //is something redirecting now from this port: 0 - nothing, 1 - lchar, -1 - nchar
     vector<pair<int, sc_time> > in_proc;
     vector<int> routing_table;
     map<int, sc_time> freed_ports;     
