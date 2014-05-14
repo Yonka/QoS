@@ -37,8 +37,11 @@ void node::init()
 bool node::write(std::vector<sc_uint<8> > packet)
 {
 //    cout << "res " << data << " at " << sc_time_stamp() << "\n";
-    if (write_buf.num_free() < packet.size())
+    if (write_buf.num_free() < packet.size() + 1)   //with sender address - delete
         return false;
+    write_buf.write(packet.back());     //delete
+    packet.pop_back();                  //delete
+    write_buf.write(address + 1);     //delete
     while (!packet.empty())
     {
         write_buf.write(packet.back());

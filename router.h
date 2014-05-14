@@ -3,6 +3,7 @@
 #include "my_interfaces.h"
 #include "systemc.h"
 #include "defs.h"
+#include <map>
 #include <time.h>
 
 using namespace std;
@@ -23,7 +24,7 @@ private:
     vector<int> out_proc;         //is something redirecting now from this port: 0 - nothing, 1 - lchar, -1 - nchar
     vector<pair<int, sc_time> > in_proc;
     vector<int> routing_table;
-    vector<int> freed_ports;     
+    map<int, sc_time> freed_ports;     
     vector<bool> dest_for_tc;
     sc_event new_data, free_port;           // we have data for redirection or any out-port received fct
     sc_event fct_delayed_event, time_code_event;    

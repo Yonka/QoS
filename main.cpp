@@ -61,6 +61,7 @@ int sc_main(int argc, char* argv[])
 
     time_manager tm("time_manager_node", n[2]);
 
+//    sc_start(0);
     sc_start(20000, SC_MS);
 
     return(0);

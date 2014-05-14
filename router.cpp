@@ -52,19 +52,31 @@ void router::init()
 void router::fct(int num)
 {
 //different delay for every node
-    freed_ports.push_back(num);
+    freed_ports.insert(pair<int, sc_time>(num, sc_time_stamp()));
     fct_delayed_event.notify(FCT_SIZE * delays[num]);
 }
 
 void router::fct_delayed()
 {
-    while(!freed_ports.empty())
+    for (int i = 0; i < num_of_ports; i++)
     {
-        cerr << this->basename() << " received fct from " << freed_ports.back() << " at "<< sc_time_stamp() << "\n";
-        ready_to_send[freed_ports.back()] = true;
-        freed_ports.pop_back();
+        map<int, sc_time>::iterator it;
+        it = freed_ports.find(i);
+        if (it != freed_ports.end())
+        {
+            if (it->second + FCT_SIZE * delays[i] > sc_time_stamp())
+            {
+                fct_delayed_event.notify(it->second + FCT_SIZE * delays[i] - sc_time_stamp());
+            }
+            else
+            {
+                cerr << this->basename() << " received fct from " << i << " at "<< sc_time_stamp() << "\n";
+                ready_to_send[i] = true;
+                freed_ports.erase(it);
+                free_port.notify();
+            }
+        }
     }
-    free_port.notify();
 }
 
 //void router::time_code(sc_uint<14> t)
