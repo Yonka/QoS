@@ -4,6 +4,8 @@ node::node(sc_module_name mn, int addr, sc_time delay = sc_time(0, SC_NS)) : sc_
 {
     ready_to_write = false;
     have_time_code_to_send = false;
+    have_fct_to_send = false;
+    have_data_to_send = false;
     cur_time = 0;
     m_tc_begin_time = sc_time(0, SC_NS);
     mark_h = false;
@@ -38,21 +40,21 @@ void node::init()
     fct_port->fct(address);
 }
 
-bool node::write(std::vector<sc_uint<8> > packet)
+bool node::write(std::vector<sc_uint<8> >* packet)
 {
 //    cout << "res " << data << " at " << sc_time_stamp() << "\n";
-    if (write_buf.num_free() < packet.size() + 1)   //with sender address - delete
+    if (write_buf.num_free() < (*packet).size() + 1)   //with sender address - delete
         return false;
-    write_buf.write(packet.back());     //delete
-    packet.pop_back();                  //delete
+    write_buf.write((*packet).back());     //delete
+    (*packet).pop_back();                  //delete
     write_buf.write(address + 1);     //delete
-    while (!packet.empty())
+    while (!(*packet).empty())
     {
-        write_buf.write(packet.back());
-        packet.pop_back();
+        write_buf.write((*packet).back());
+        (*packet).pop_back();
     }
     eop.notify();
-    cout << this->basename() << " have new packet " << sc_time_stamp() << '\n';
+//    cout << this->basename() << " have new packet " << sc_time_stamp() << '\n';
     return true;    
 }
 
@@ -76,7 +78,8 @@ void node::write_byte(symbol s)
     {
         read_buf.write(s.data);
     }
-    fct_port->fct(address);
+    have_fct_to_send = true;
+    eop.notify(SC_ZERO_TIME);
 }
 
 void node::fct()
@@ -162,7 +165,6 @@ void node::new_time_code(int value)
 
 void node::sender()
 {
-    bool have_data_to_send = false;
     int receiver_addr = -1; /////////////////////ok?
 //    schedule_table<vector>
     while (true)
@@ -170,10 +172,16 @@ void node::sender()
 //        wait() check if it is allowed time-slot
         wait();
 
-      /////////////////////////////////////////////////////////////////check it!
-        if (!(have_time_code_to_send || schedule_table[address][cur_time % table_size] == 1 || receiver_addr != -1))
+/////////////////////////////////////////////////////////////////TODO: check it!
+        if (!(have_fct_to_send || have_time_code_to_send || schedule_table[address][cur_time % table_size] == 1 || receiver_addr != -1))
             continue;
         symbol s;
+        if (have_fct_to_send)
+        {
+            have_fct_to_send = false;
+            fct_port->fct(address);
+            wait(FCT_SIZE * delay);
+        }
         if (!have_time_code_to_send)
         {
             if (!have_data_to_send && write_buf.nb_read(tmp_byte))
@@ -193,15 +201,20 @@ void node::sender()
         }
         else if (have_data_to_send)
         {
-            if (!ready_to_write /*|| !(schedule_table[address][cur_time] == 1)*/)
+            if (!ready_to_write)
                 continue;
             s = symbol(tmp_byte, receiver_addr, nchar);
+            if (tmp_byte == EOP_SYMBOL)
+            {
+                receiver_addr = -1;
+                eop.notify(SC_ZERO_TIME);
+            }
             cerr << this->basename() << " send " << tmp_byte << " at " << sc_time_stamp() << "\n";
             have_data_to_send = false;
         }
         else
             continue;
-        wait(delay /* * s.t*/);
+        wait(delay * s.t);
         fct_port->write_byte(address, s);
         ready_to_write = false;
     }

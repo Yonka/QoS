@@ -7,8 +7,10 @@ trafgen::trafgen(sc_module_name mn, int param = 1, sc_time delay = sc_time(0, SC
 {
     packet_size = 4;
     srand((unsigned int) time(0));
+
     SC_THREAD(gen_event);
     sensitive << send_next;
+    
     SC_METHOD(send_byte);
     dont_initialize();
     sensitive << send;
@@ -26,7 +28,7 @@ void trafgen::gen_event()
         }
         while (!success)
         {
-            send.notify(delay);
+            send.notify(SC_ZERO_TIME);
             wait();
 //TODO : vector -> sc_vector(?) and use empty event(if exists Oo)
             if (packet.empty())
@@ -38,9 +40,14 @@ void trafgen::gen_event()
 void trafgen::send_byte()
 {
 //    cout << "send " << x << '\n';
-    if (out_port->write(packet))
-        success = true;
-//////////////////////////////////////////////////////////////////////////
+
+    //////////////////////////////////////////////////////////////////////////
     //TODO:rename event
-    send_next.notify(SC_ZERO_TIME); 
+    if (out_port->write(&packet))
+    {
+        success = true;
+        send_next.notify(SC_ZERO_TIME); 
+    }
+    else 
+        send_next.notify(delay); 
 }

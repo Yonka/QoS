@@ -5,7 +5,7 @@
 class writeI : virtual public sc_interface
 {
 public:
-    virtual bool write(std::vector<sc_uint<8> > packet) = 0;
+    virtual bool write(std::vector<sc_uint<8> > *packet) = 0;
 //    virtual void writeTick(double tickValue) = 0;
 };
 
