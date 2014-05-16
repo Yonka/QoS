@@ -20,7 +20,7 @@ node::node(sc_module_name mn, int addr, sc_time delay = sc_time(0, SC_NS)) : sc_
     
     SC_THREAD(sender);
     dont_initialize();
-    sensitive << eop << fct_event;
+    sensitive << eop << fct_event << r_sender;
     
     SC_METHOD(fct_delayed);
     dont_initialize();
@@ -37,7 +37,9 @@ node::node(sc_module_name mn, int addr, sc_time delay = sc_time(0, SC_NS)) : sc_
 
 void node::init()
 {
-    fct_port->fct(address);
+//    fct_port->fct(address);
+    have_fct_to_send = true;
+    eop.notify(SC_ZERO_TIME);
 }
 
 bool node::write(std::vector<sc_uint<8> >* packet)
@@ -173,36 +175,27 @@ void node::sender()
         wait();
 
 /////////////////////////////////////////////////////////////////TODO: check it!
+
         if (!(have_fct_to_send || have_time_code_to_send || schedule_table[address][cur_time % table_size] == 1 || receiver_addr != -1))
             continue;
         symbol s;
+        if (have_time_code_to_send) 
+        {
+            s = symbol(cur_time, BROADCAST_SYMBOL, lchar);
+            cerr << this->basename() << " send tc" << cur_time << " at " << sc_time_stamp() << "\n";
+            have_time_code_to_send = false;
+            wait(delay * s.t);
+            fct_port->write_byte(address, s);
+//            ready_to_write = false;       //we don't need fct to send tc
+        }
         if (have_fct_to_send)
         {
             have_fct_to_send = false;
             fct_port->fct(address);
             wait(FCT_SIZE * delay);
         }
-        if (!have_time_code_to_send)
+        if (have_data_to_send && ready_to_write)
         {
-            if (!have_data_to_send && write_buf.nb_read(tmp_byte))
-            {
-                have_data_to_send = true;
-                if (receiver_addr = -1) 
-                    receiver_addr = tmp_byte;
-            }
-            else if (!have_data_to_send)
-                receiver_addr = -1;
-        }
-        if (have_time_code_to_send) 
-        {
-            s = symbol(cur_time, BROADCAST_SYMBOL, lchar);
-            cerr << this->basename() << " send tc" << cur_time << " at " << sc_time_stamp() << "\n";
-            have_time_code_to_send = false;
-        }
-        else if (have_data_to_send)
-        {
-            if (!ready_to_write)
-                continue;
             s = symbol(tmp_byte, receiver_addr, nchar);
             if (tmp_byte == EOP_SYMBOL)
             {
@@ -211,11 +204,20 @@ void node::sender()
             }
             cerr << this->basename() << " send " << tmp_byte << " at " << sc_time_stamp() << "\n";
             have_data_to_send = false;
+            wait(delay * s.t);
+            fct_port->write_byte(address, s);
+            ready_to_write = false;
         }
-        else
-            continue;
-        wait(delay * s.t);
-        fct_port->write_byte(address, s);
-        ready_to_write = false;
+        if (!have_data_to_send && write_buf.nb_read(tmp_byte))
+        {
+            have_data_to_send = true;
+            if (receiver_addr = -1) 
+                receiver_addr = tmp_byte;
+        }
+        else if (!have_data_to_send)
+            receiver_addr = -1;
+        if (have_fct_to_send || have_time_code_to_send || (have_data_to_send && ready_to_write))
+            r_sender.notify(SC_ZERO_TIME);
+
     }
 }

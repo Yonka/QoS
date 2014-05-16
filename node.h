@@ -26,7 +26,7 @@ public:
 private:
     sc_fifo<sc_uint<8> > write_buf;
     sc_uint<8> tmp_byte;
-    sc_event eop, fct_event, fct_delayed_event, time_code_event;
+    sc_event eop, fct_event, fct_delayed_event, time_code_event, r_sender;
     int address;
 
     sc_time delay;

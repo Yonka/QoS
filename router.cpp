@@ -102,7 +102,7 @@ void router::fct_delayed()
 void router::write_byte(int num, symbol s)
 {
     cerr << this->basename() << " received " << s.data << " on port " << num << " at " << sc_time_stamp() << "\n";
-    if (address_destination[num] == -1 && (s.addr != BROADCAST_SYMBOL))
+    if (address_destination[num] == -1 && (s.t == nchar))
     {
         int addr = routing_table[s.addr];
         address_destination[num] = addr;
@@ -111,10 +111,10 @@ void router::write_byte(int num, symbol s)
     }
     else 
     {
-        if (s.addr == BROADCAST_SYMBOL)
+        if (s.t == lchar)
         {
             tmp_buf[num] = s;
-            new_data.notify();
+            new_data.notify(SC_ZERO_TIME);
             fill_n(dest_for_tc.begin(), num_of_ports, true);
             dest_for_tc[num] = false;   //we already have it
         }
@@ -122,7 +122,7 @@ void router::write_byte(int num, symbol s)
         {
             ready_to_redirect[num] = true;
             buf[num] = s;
-            new_data.notify();
+            new_data.notify(SC_ZERO_TIME);
         }
     }
 
@@ -213,7 +213,7 @@ void router::redirect_time()
             {
                 tmp_buf[i].t = nchar;
                 out_proc[i] = 0;
-                fct_port[i]->fct();
+//                fct_port[i]->fct();   //TODO: ask
             }
         }
     }
