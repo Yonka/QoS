@@ -3,14 +3,15 @@
 
 #include "systemc.h"
 #include "node.h"
-
-typedef double tick_value_type;
+#include "defs.h"
 
 class time_manager : public sc_module
 {
 private:
-    tick_value_type m_tickValue;
+    int m_tickValue;
+    sc_time m_t_tc;
     node* tm_node;
+
 
 public:
     SC_HAS_PROCESS(time_manager);

@@ -7,8 +7,11 @@ using namespace std;
 #define FCT_SIZE 1
 #define EOP_SYMBOL 0
 #define BROADCAST_SYMBOL 255
+typedef double tick_value_type;
 
 extern vector<vector<int> > schedule_table;
+extern int table_size;
+extern vector<sc_time> delays;
 
 enum symbol_type
 {
