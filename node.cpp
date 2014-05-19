@@ -11,7 +11,7 @@ node::node(sc_module_name mn, int addr, sc_time delay = sc_time(0, SC_NS)) : sc_
     mark_h = false;
     time_h = false;
 
-    m_t_tc = sc_time(100, SC_NS);
+    m_t_tc = sc_time(TICK, SC_NS);
     m_t_te = m_t_tc * table_size;
     m_e_begin_time = SC_ZERO_TIME;
     m_tc_begin_time = SC_ZERO_TIME;

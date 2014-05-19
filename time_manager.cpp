@@ -1,10 +1,9 @@
 #include "time_manager.h"
-#include "defs.h"
 
 time_manager::time_manager(sc_module_name mn, node* tm_node) : sc_module(mn), tm_node(tm_node) 
 {
     SC_THREAD(tick);
-    m_t_tc = sc_time(100, SC_NS);
+    m_t_tc = sc_time(TICK, SC_NS);
     m_tickValue = 0;
 }
 
