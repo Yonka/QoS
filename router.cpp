@@ -169,7 +169,7 @@ void router::redirect_time()
     {
         if (tmp_buf[i].t == lchar)
         {
-            if (out_proc[i] != 0)
+            if (out_proc[i] != 0 || out_proc[i] != 1)
                 continue;
 
             out_proc[i] = 1;
