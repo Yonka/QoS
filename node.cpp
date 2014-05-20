@@ -1,6 +1,6 @@
 #include "node.h"
 
-node::node(sc_module_name mn, int addr, sc_time delay = sc_time(0, SC_NS)) : sc_module(mn), address(addr), delay(delay), write_buf(40), read_buf(40)
+node::node(sc_module_name mn, int id, int addr, sc_time delay = sc_time(0, SC_NS)) : sc_module(mn), id(id), address(addr), delay(delay), write_buf(40), read_buf(40)
 {
     ready_to_write = false;
     have_time_code_to_send = false;

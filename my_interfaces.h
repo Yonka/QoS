@@ -6,10 +6,16 @@ class writeI : virtual public sc_interface
 {
 public:
     virtual bool write(std::vector<sc_uint<8> > *packet) = 0;
-//    virtual void writeTick(double tickValue) = 0;
 };
 
 class node_router_I : virtual public sc_interface
+{
+public:
+    virtual void fct(int num) = 0;
+    virtual void write_byte(int num, symbol s) = 0;
+};
+
+class router_router_I : virtual public sc_interface
 {
 public:
     virtual void fct(int num) = 0;

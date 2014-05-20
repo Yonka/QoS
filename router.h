@@ -47,10 +47,11 @@ private:
     void init();
 
 public:
-    sc_port<router_node_I> fct_port[num_of_ports];   // output ports
-
+    int id;
     SC_HAS_PROCESS(router);
-    router(sc_module_name mn, sc_time delay);
+    router(sc_module_name mn, int id, sc_time delay);
+
+    sc_port<router_node_I> fct_port[num_of_ports];   // output ports
 
     virtual void write_byte(int num, symbol s);
 

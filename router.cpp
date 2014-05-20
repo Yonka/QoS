@@ -1,7 +1,7 @@
 #include "router.h"
 
 
-router::router(sc_module_name mn, sc_time delay = sc_time(0, SC_NS)): sc_module(mn), delay(delay)
+router::router(sc_module_name mn, int id, sc_time delay = sc_time(0, SC_NS)): sc_module(mn), id(id), delay(delay)
 {
     init();
     SC_METHOD(init_fct);
