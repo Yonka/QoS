@@ -12,8 +12,8 @@ class node : public sc_module, public writeI, public router_node_I
 {
 public:
     SC_HAS_PROCESS(node);
-    node(sc_module_name mn, int addr, sc_time delay);
-
+    node(sc_module_name mn, int id, int addr, sc_time delay);
+    int id;
     virtual bool write(std::vector<sc_uint<8> >* packet);
     virtual void write_byte(symbol s);
     virtual void fct();

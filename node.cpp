@@ -1,6 +1,6 @@
 #include "node.h"
 
-node::node(sc_module_name mn, int addr, sc_time delay = sc_time(0, SC_NS)) : sc_module(mn), address(addr), delay(delay), write_buf(40), read_buf(40)
+node::node(sc_module_name mn, int id, int addr, sc_time delay = sc_time(0, SC_NS)) : sc_module(mn), id(id), address(addr), delay(delay), write_buf(40), read_buf(40)
 {
     ready_to_write = false;
     have_time_code_to_send = false;
@@ -11,7 +11,7 @@ node::node(sc_module_name mn, int addr, sc_time delay = sc_time(0, SC_NS)) : sc_
     mark_h = false;
     time_h = false;
 
-    m_t_tc = sc_time(100, SC_NS);
+    m_t_tc = sc_time(TICK, SC_NS);
     m_t_te = m_t_tc * table_size;
     m_e_begin_time = SC_ZERO_TIME;
     m_tc_begin_time = SC_ZERO_TIME;
@@ -45,11 +45,11 @@ void node::init()
 bool node::write(std::vector<sc_uint<8> >* packet)
 {
 //    cout << "res " << data << " at " << sc_time_stamp() << "\n";
-    if (write_buf.num_free() < (*packet).size() + 1)   //with sender address - delete
+    if (write_buf.num_free() < (*packet).size() + 1)   //with sender address - delete +1
         return false;
-    write_buf.write((*packet).back());     //delete
-    (*packet).pop_back();                  //delete
-    write_buf.write(address + 1);     //delete
+    write_buf.write((*packet).back());      //delete
+    (*packet).pop_back();                   //delete
+    write_buf.write(address + 1);           //delete
     while (!(*packet).empty())
     {
         write_buf.write((*packet).back());
@@ -168,14 +168,10 @@ void node::new_time_code(int value)
 void node::sender()
 {
     int receiver_addr = -1; /////////////////////ok?
-//    schedule_table<vector>
     while (true)
     {
-//        wait() check if it is allowed time-slot
         wait();
-
-/////////////////////////////////////////////////////////////////TODO: check it!
-
+//////////////////////////////////////////////////////////TODO: check it!
         if (!(have_fct_to_send || have_time_code_to_send || schedule_table[address][cur_time % table_size] == 1 || receiver_addr != -1))
             continue;
         symbol s;
@@ -186,7 +182,6 @@ void node::sender()
             have_time_code_to_send = false;
             wait(delay * s.t);
             fct_port->write_byte(address, s);
-//            ready_to_write = false;       //we don't need fct to send tc
         }
         if (have_fct_to_send)
         {
@@ -218,6 +213,5 @@ void node::sender()
             receiver_addr = -1;
         if (have_fct_to_send || have_time_code_to_send || (have_data_to_send && ready_to_write))
             r_sender.notify(SC_ZERO_TIME);
-
     }
 }

@@ -20,11 +20,11 @@ private:
 
     vector<int> address_source;             // if port is receiving data, then source address, -1 otherwise 
     vector<bool> ready_to_send;             // is an output port ready to send data (received fct)
-    vector<int> out_proc;                   // is something redirecting now from this port: 0 - nothing, 1 - lchar, -1 - nchar
+    vector<int> out_proc;                   // is something redirecting now from this port: 0 - nothing, 1 - lchar, 2 - fct, 3 - nchar
     vector<pair<int, sc_time> > in_proc;    // is something redirecting to this port: -//- and finishing time
     vector<int> routing_table;
     map<int, sc_time> freed_ports;          // map of ports - num + sending begin-time
-    vector<bool> dest_for_tc;               // need to send tc 
+    vector<bool> dest_for_tc, dest_for_fct;               // need to send tc 
     sc_event new_data, free_port;           // we have data for redirection or any out-port received fct
     sc_event fct_delayed_event, time_code_event;    
 
@@ -36,6 +36,8 @@ private:
 
     void redirect_time();
 
+    void redirect_fct();
+
     void redirect_connect();
 
     bool inner_connect(int x);
@@ -45,10 +47,11 @@ private:
     void init();
 
 public:
-    sc_port<router_node_I> fct_port[num_of_ports];   // output ports
-
+    int id;
     SC_HAS_PROCESS(router);
-    router(sc_module_name mn, sc_time delay);
+    router(sc_module_name mn, int id, sc_time delay);
+
+    sc_port<router_node_I> fct_port[num_of_ports];   // output ports
 
     virtual void write_byte(int num, symbol s);
 

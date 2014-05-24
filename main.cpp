@@ -43,7 +43,7 @@ int sc_main(int argc, char* argv[])
         char* a = new char[name.size()];
         a[name.size()]=0;
         memcpy(a,name.c_str(), name.size());
-        trafgen *t0 = new trafgen("trafgen", 10, sc_time(delay_traf, SC_NS));
+        trafgen *t0 = new trafgen("trafgen", 1, 10000, sc_time(delay_traf, SC_NS));
         node *n0 = new node(a, i, sc_time(delay_node, SC_NS));
         (*t0).out_port(*n0);
         t.push_back(t0);
@@ -52,7 +52,8 @@ int sc_main(int argc, char* argv[])
 
     int delay_router;
     in >> delay_router;
-    router router0("router", sc_time(delay_router, SC_NS));
+    router router0("router0", 0, sc_time(delay_router, SC_NS));
+    router router1("router1", 1, sc_time(delay_router, SC_NS));
 
     for (int i = 0; i < nodes; i++)
     {
