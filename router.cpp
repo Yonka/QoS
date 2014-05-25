@@ -1,7 +1,7 @@
 #include "router.h"
 
 
-router::router(sc_module_name mn, int id, sc_time delay = sc_time(0, SC_NS)): sc_module(mn), id(id), delay(delay)
+router::router(sc_module_name mn, int id,int ports, sc_time delay = sc_time(0, SC_NS)): sc_module(mn), id(id), ports(ports),delay(delay)
 {
     init();
     SC_METHOD(init_fct);
@@ -21,35 +21,41 @@ router::router(sc_module_name mn, int id, sc_time delay = sc_time(0, SC_NS)): sc
 
 void router::init()
 {
-    address_destination.resize(num_of_ports);
-    fill_n(address_destination.begin(), num_of_ports, -1);
+    address_destination.resize(ports);
+    fill_n(address_destination.begin(), ports, -1);
 
-    address_source.resize(num_of_ports);
-    fill_n(address_source.begin(), num_of_ports, -1);
+    address_source.resize(ports);
+    fill_n(address_source.begin(), ports, -1);
 
-    ready_to_send.resize(num_of_ports);
-    fill_n(ready_to_send.begin(), num_of_ports, false);
+    ready_to_send.resize(ports);
+    fill_n(ready_to_send.begin(), ports, false);
 
-    ready_to_redirect.resize(num_of_ports);
-    fill_n(ready_to_redirect.begin(), num_of_ports, false);
+    ready_to_redirect.resize(ports);
+    fill_n(ready_to_redirect.begin(), ports, false);
 
-    dest_for_tc.resize(num_of_ports);
-    dest_for_fct.resize(num_of_ports);
-    in_proc.resize(num_of_ports);
-    fill_n(in_proc.begin(), num_of_ports, make_pair(0, sc_time(0, SC_NS)));
+    dest_for_tc.resize(ports);
+    dest_for_fct.resize(ports);
+    in_proc.resize(ports);
+    fill_n(in_proc.begin(), ports, make_pair(0, sc_time(0, SC_NS)));
 
-    out_proc.resize(num_of_ports);
-    fill_n(out_proc.begin(), num_of_ports, false);
+    out_proc.resize(ports);
+    fill_n(out_proc.begin(), ports, false);
 
+    for (int i = 0; i < ports; i++)
+    {
+        buf.push_back(symbol(0,0,nchar));
+        tmp_buf.push_back(symbol(0,0,nchar));
+//        fct_port.push_back(new sc_port<router_node_I>);
+    }
     srand (time(NULL));
 
     int dir;
     for (int i = 0; i < 256; i++)
     {
-        dir = rand() % num_of_ports;
+        dir = rand() % ports;
         while (dir == i)
         {
-            dir = rand() % num_of_ports;
+            dir = rand() % ports;
         }
         routing_table.push_back(dir);
     }
@@ -64,7 +70,7 @@ void router::fct(int num)
 
 void router::fct_delayed()
 {
-    for (int i = 0; i < num_of_ports; i++)
+    for (int i = 0; i < ports; i++)
     {
         map<int, sc_time>::iterator it;
         it = freed_ports.find(i);
@@ -112,7 +118,7 @@ void router::write_byte(int num, symbol s)
     {
         tmp_buf[num] = s;
         new_data.notify(SC_ZERO_TIME);
-        fill_n(dest_for_tc.begin(), num_of_ports, true);
+        fill_n(dest_for_tc.begin(), ports, true);
         dest_for_tc[num] = false;   //we already have it
     }
     else
@@ -138,7 +144,7 @@ void router::redirect()
 
 void router::redirect_ports()
 {
-    for (int i = 0; i < num_of_ports; i++)
+    for (int i = 0; i < ports; i++)
     {
         if (out_proc[i] == 3  && in_proc[address_destination[i]].second > sc_time_stamp())    //too early to free ports
         {
@@ -151,7 +157,7 @@ void router::redirect_ports()
             in_proc[address_destination[i]].first = 0;
             out_proc[i] = 0;
 
-            fct_port[address_destination[i]]->write_byte(buf[i]);
+            (*fct_port[address_destination[i]])->write_byte(buf[i]);
 //            fct_port[i]->fct();       //fct-sending moved to another function
             dest_for_fct[i] = true;
             if (buf[i].data == EOP_SYMBOL)
@@ -165,7 +171,7 @@ void router::redirect_ports()
 
 void router::redirect_time()
 {
-    for (int i = 0; i < num_of_ports; i++)
+    for (int i = 0; i < ports; i++)
     {
         if (tmp_buf[i].t == lchar)
         {
@@ -174,7 +180,7 @@ void router::redirect_time()
 
             out_proc[i] = 1;
 
-            for (int j = 0; j < num_of_ports; j++)
+            for (int j = 0; j < ports; j++)
             {
                 if (!dest_for_tc[j])
                     continue;
@@ -195,13 +201,13 @@ void router::redirect_time()
                 {
                     in_proc[j].first = 0;
                     dest_for_tc[j] = false;
-                    fct_port[j]->write_byte(tmp_buf[i]);
+                    (*fct_port[j])->write_byte(tmp_buf[i]);
                     //                    fct_port[i]->fct(delay);      //what???
                 }              
 
             }
             bool freed = true;
-            for (int j = 0; j < num_of_ports; j++)
+            for (int j = 0; j < ports; j++)
                 if (dest_for_tc[j])
                     freed = false;
             if (freed)
@@ -216,14 +222,14 @@ void router::redirect_time()
 
 void router::redirect_fct()
 {
-    for (int i = 0; i < num_of_ports; i++)
+    for (int i = 0; i < ports; i++)
     {
         if (dest_for_fct[i] && in_proc[i].first == 0)
         {
             in_proc[i].first = 2;
             in_proc[i].second = sc_time_stamp() + delays[i] * FCT_SIZE;
             dest_for_fct[i] = false;
-            fct_port[i]->fct();
+            (*fct_port[i])->fct();
             continue;
         }
         if (in_proc[i].first == 2 && in_proc[i].second > sc_time_stamp())
@@ -240,7 +246,7 @@ void router::redirect_fct()
 
 void router::redirect_connect()
 {
-    for (int i = 0; i < num_of_ports; i++)
+    for (int i = 0; i < ports; i++)
     {
         if (!inner_connect(i))
             continue;
@@ -268,7 +274,7 @@ bool router::inner_connect(int x)
 
 void router::init_fct()
 {
-    for (int i = 0; i < num_of_ports; i++)
+    for (int i = 0; i < ports; i++)
     {
 //        fct_port[i]->fct();       //fct-sending moved to another function
         dest_for_fct[i] = true;

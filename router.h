@@ -11,8 +11,8 @@ using namespace std;
 class router : public sc_module, public node_router_I
 {
 private:
-    static const int num_of_ports = 6;
-    symbol buf[num_of_ports], tmp_buf[num_of_ports]; // input buffer, buffer for tc
+    int ports;
+    vector<symbol> buf, tmp_buf; // input buffer, buffer for tc
     sc_time delay;
 
     vector<int> address_destination;        // if port is sending data, then destination address, -1 otherwise 
@@ -49,9 +49,9 @@ private:
 public:
     int id;
     SC_HAS_PROCESS(router);
-    router(sc_module_name mn, int id, sc_time delay);
+    router(sc_module_name mn, int id, int ports, sc_time delay);
 
-    sc_port<router_node_I> fct_port[num_of_ports];   // output ports
+    vector<sc_port<router_node_I>*> fct_port;   // output ports
 
     virtual void write_byte(int num, symbol s);
 

@@ -1,27 +1,12 @@
-#include "systemc.h"
-#include "defs.h"
-#include "cstdlib"
-#include "ctime"
-#include "trafgen.h"
-#include "node.h"
-#include "router.h"
-#include "time_manager.h"
-using namespace std;
-
-vector<vector<int> > schedule_table;
-vector<sc_time> delays;
-int table_size;
-int sc_main(int argc, char* argv[])
+#include "action.h"
+void initi()
 {
-    int k = 1;
-    if (argc == 2)
-        k = atoi(argv[1]);
-    int nodes, tmp;
+    int tmp;
     ifstream in;
     in.open("config");
     in >> nodes >> table_size;
 
-    //filling schedule table
+    //filling schedule tablelabel
     schedule_table.resize(nodes);
     for (int i = 0; i < nodes; i++)
     {
@@ -30,10 +15,11 @@ int sc_main(int argc, char* argv[])
             in >> tmp;
             schedule_table[i].push_back(tmp);
         }
+        nfct.push_back(false);
+        rfct.push_back(false);
     }
 
-    vector<trafgen *> t;
-    vector<node *> n;
+
     for (int i = 0; i < nodes; i++)
     {
         double delay_traf, delay_node;
@@ -52,18 +38,21 @@ int sc_main(int argc, char* argv[])
 
     int delay_router;
     in >> delay_router;
-    router router0("router", sc_time(delay_router, SC_NS));
+    router0 = new router("router", sc_time(delay_router, SC_NS));
 
     for (int i = 0; i < nodes; i++)
     {
-        router0.fct_port[i](*n[i]);
-        (*n[i]).fct_port(router0);
+        (*router0).fct_port[i](*n[i]);
+        (*n[i]).fct_port(*router0);
     }
 
-    time_manager tm("time_manager_node", n[2]);
+    tM = new time_manager("time_manager_node", n[2]);
 
-//    sc_start(0);
-    sc_start(20000, SC_MS);
-
-    return(0);
 }
+void next_step()
+{
+    cerr << sc_delta_count() << "\n";
+    sc_start(1, SC_NS);
+
+}
+

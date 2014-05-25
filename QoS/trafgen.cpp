@@ -5,6 +5,7 @@
 
 trafgen::trafgen(sc_module_name mn, int param = 1, sc_time delay = sc_time(0, SC_NS)) : sc_module(mn), runs(param), delay(delay)
 {
+    packet_size = 4;
     srand((unsigned int) time(0));
     SC_THREAD(gen_event);
     sensitive << send_next;
@@ -17,26 +18,29 @@ void trafgen::gen_event()
 {
     for (int r = 0; r < runs; r++)
     {
-        std::vector<sc_uint<8> > packet;
+        success = false;
         packet.push_back(EOP_SYMBOL);
-        for (int i = 0; i < 19; i++)
+        for (int i = 0; i < packet_size; i++)
         {
             packet.push_back((sc_uint<8>)rand() % 254 + 1);
         }
-        while (!packet.empty())
+        while (!success)
         {
-            x = packet.back();
-            packet.pop_back();
             send.notify(delay);
             wait();
+//TODO : vector -> sc_vector(?) and use empty event(if exists Oo)
+            if (packet.empty())
+                break;
         }
-        wait(1000, SC_NS);
     }
 }
 
 void trafgen::send_byte()
 {
 //    cout << "send " << x << '\n';
-    out_port->write(x);
-    send_next.notify(SC_ZERO_TIME);
+    if (out_port->write(packet))
+        success = true;
+//////////////////////////////////////////////////////////////////////////
+    //TODO:rename event
+    send_next.notify(SC_ZERO_TIME); 
 }
