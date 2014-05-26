@@ -47,9 +47,7 @@ bool node::write(std::vector<sc_uint<8> >* packet)
 //    cout << "res " << data << " at " << sc_time_stamp() << "\n";
     if (write_buf.num_free() < (*packet).size() + 1)   //with sender address - delete +1
         return false;
-    write_buf.write((*packet).back());      //delete
-    (*packet).pop_back();                   //delete
-    write_buf.write(address + 1);           //delete
+    write_buf.write(address);
     while (!(*packet).empty())
     {
         write_buf.write((*packet).back());
@@ -60,7 +58,7 @@ bool node::write(std::vector<sc_uint<8> >* packet)
     return true;    
 }
 
-void node::write_byte(symbol s)
+void node::write_byte(int num, symbol s)
 {
     cerr << this->basename() << " received " << s.data << " at " << sc_time_stamp() << "\n";
     if (s.t == nchar && s.data == EOP_SYMBOL)
@@ -84,7 +82,7 @@ void node::write_byte(symbol s)
     eop.notify(SC_ZERO_TIME);
 }
 
-void node::fct()
+void node::fct(int num)
 {
      fct_delayed_event.notify(FCT_SIZE * delay);
 }
@@ -154,12 +152,12 @@ void node::time_code(int t)
 {
     mark_h = true; 
     time_code_event.notify();
-    cout << address << " received tc\n";
+    cout << id << " received tc\n";
 }
 
 void node::new_time_code(int value)
 {
-    cout << address << " send tc\n";
+    cout << id << " send tc\n";
 //    cur_time = value;
     have_time_code_to_send = true;
     eop.notify();
@@ -177,16 +175,16 @@ void node::sender()
         symbol s;
         if (have_time_code_to_send) 
         {
-            s = symbol(cur_time, BROADCAST_SYMBOL, lchar);
+            s = symbol(cur_time, -1, lchar);
             cerr << this->basename() << " send tc" << cur_time << " at " << sc_time_stamp() << "\n";
             have_time_code_to_send = false;
             wait(delay * s.t);
-            fct_port->write_byte(address, s);
+            fct_port->write_byte(direct, s);
         }
         if (have_fct_to_send)
         {
             have_fct_to_send = false;
-            fct_port->fct(address);
+            fct_port->fct(direct);
             wait(FCT_SIZE * delay);
         }
         if (have_data_to_send && ready_to_write)
@@ -200,7 +198,7 @@ void node::sender()
             cerr << this->basename() << " send " << tmp_byte << " at " << sc_time_stamp() << "\n";
             have_data_to_send = false;
             wait(delay * s.t);
-            fct_port->write_byte(address, s);
+            fct_port->write_byte(direct, s);
             ready_to_write = false;
         }
         if (!have_data_to_send && write_buf.nb_read(tmp_byte))

@@ -5,8 +5,8 @@
 using namespace std;
 
 #define FCT_SIZE 1
-#define EOP_SYMBOL 0
-#define BROADCAST_SYMBOL 255
+#define EOP_SYMBOL 255
+//#define BROADCAST_SYMBOL 255
 #define TICK 100
 typedef double tick_value_type;
 

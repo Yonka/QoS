@@ -1,7 +1,7 @@
 #include "router.h"
 
 
-router::router(sc_module_name mn, int id,int ports, sc_time delay = sc_time(0, SC_NS)): sc_module(mn), id(id), ports(ports),delay(delay)
+router::router(sc_module_name mn, int id,int ports, sc_time delay/* = sc_time(0, SC_NS)*/, vector<int> table): sc_module(mn), id(id), ports(ports), delay(delay), routing_table(table)
 {
     init();
     SC_METHOD(init_fct);
@@ -41,24 +41,26 @@ void router::init()
     out_proc.resize(ports);
     fill_n(out_proc.begin(), ports, false);
 
+    direct.resize(ports);
+
     for (int i = 0; i < ports; i++)
     {
         buf.push_back(symbol(0,0,nchar));
         tmp_buf.push_back(symbol(0,0,nchar));
-//        fct_port.push_back(new sc_port<router_node_I>);
+        fct_port.push_back(new sc_port<conn_I>);
     }
-    srand (time(NULL));
+//    srand (time(NULL));
 
-    int dir;
-    for (int i = 0; i < 256; i++)
-    {
-        dir = rand() % ports;
-        while (dir == i)
-        {
-            dir = rand() % ports;
-        }
-        routing_table.push_back(dir);
-    }
+//    int dir;
+//    for (int i = 0; i < 256; i++)
+//    {
+//        dir = rand() % ports;
+//        while (dir == i)
+//        {
+//            dir = rand() % ports;
+//        }
+//        routing_table.push_back(dir);
+//    }
 }
 
 void router::fct(int num)
@@ -157,9 +159,10 @@ void router::redirect_ports()
             in_proc[address_destination[i]].first = 0;
             out_proc[i] = 0;
 
-            (*fct_port[address_destination[i]])->write_byte(buf[i]);
+            (*fct_port[address_destination[i]])->write_byte(direct[address_destination[i]], buf[i]);
 //            fct_port[i]->fct();       //fct-sending moved to another function
             dest_for_fct[i] = true;
+            new_data.notify(SC_ZERO_TIME);
             if (buf[i].data == EOP_SYMBOL)
             {
                 address_source[address_destination[i]] = -1;
@@ -175,7 +178,7 @@ void router::redirect_time()
     {
         if (tmp_buf[i].t == lchar)
         {
-            if (out_proc[i] != 0 || out_proc[i] != 1)
+            if (out_proc[i] == 2 || out_proc[i] == 3)
                 continue;
 
             out_proc[i] = 1;
@@ -201,7 +204,7 @@ void router::redirect_time()
                 {
                     in_proc[j].first = 0;
                     dest_for_tc[j] = false;
-                    (*fct_port[j])->write_byte(tmp_buf[i]);
+                    (*fct_port[j])->write_byte(direct[j], tmp_buf[i]);
                     //                    fct_port[i]->fct(delay);      //what???
                 }              
 
@@ -229,7 +232,7 @@ void router::redirect_fct()
             in_proc[i].first = 2;
             in_proc[i].second = sc_time_stamp() + delays[i] * FCT_SIZE;
             dest_for_fct[i] = false;
-            (*fct_port[i])->fct();
+            (*fct_port[i])->fct(direct[i]);
             continue;
         }
         if (in_proc[i].first == 2 && in_proc[i].second > sc_time_stamp())

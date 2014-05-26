@@ -8,7 +8,7 @@
 
 using namespace std;
 
-class router : public sc_module, public node_router_I
+class router : public sc_module, public conn_I
 {
 private:
     int ports;
@@ -48,10 +48,11 @@ private:
 
 public:
     int id;
+    vector<int> direct;
     SC_HAS_PROCESS(router);
-    router(sc_module_name mn, int id, int ports, sc_time delay);
+    router(sc_module_name mn, int id, int ports, sc_time delay, vector<int> table);
 
-    vector<sc_port<router_node_I>*> fct_port;   // output ports
+    vector<sc_port<conn_I>*> fct_port;   // output ports
 
     virtual void write_byte(int num, symbol s);
 

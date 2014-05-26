@@ -8,19 +8,19 @@
 
 using namespace std;
 
-class node : public sc_module, public writeI, public router_node_I
+class node : public sc_module, public writeI, public conn_I
 {
 public:
     SC_HAS_PROCESS(node);
     node(sc_module_name mn, int id, int addr, sc_time delay);
-    int id;
+    int id, direct;
     virtual bool write(std::vector<sc_uint<8> >* packet);
-    virtual void write_byte(symbol s);
-    virtual void fct();
+    virtual void write_byte(int num, symbol s);
+    virtual void fct(int num);
     virtual void time_code(int t);
     void init();
 
-    sc_port<node_router_I> fct_port;
+    sc_port<conn_I> fct_port;
 
     friend class time_manager;
 private:
