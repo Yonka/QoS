@@ -99,57 +99,95 @@ void node::change_tc()
     while (true)
     {
         wait();
-        if (mark_h)
+        if (scheduling == 2)
         {
-            mark_h = false;
-            if (m_e_begin_time == SC_ZERO_TIME)
+            if (mark_h)
             {
-                m_e_begin_time = sc_time_stamp();
-                m_tc_begin_time = sc_time_stamp();
-                time_code_event.cancel();
-                time_code_event.notify(m_t_tc);
+                mark_h = false;
+                if (m_e_begin_time == SC_ZERO_TIME)
+                {
+                    m_e_begin_time = sc_time_stamp();
+                    m_tc_begin_time = sc_time_stamp();
+                    time_code_event.cancel();
+                    time_code_event.notify(m_t_tc);
+                    continue;
+                }
+                if (cur_time == table_size - 1)
+                {
+                    eop.notify(SC_ZERO_TIME);
+                    cur_time = 0;
+                    m_t_te = sc_time_stamp() - m_e_begin_time;
+                    m_t_tc = m_t_te / table_size;
+                    m_tc_begin_time = sc_time_stamp();
+                    m_e_begin_time = sc_time_stamp();
+                    time_code_event.notify(m_t_tc);
+                }
+                else if (cur_time == 0)
+                {
+                    m_t_tc += (sc_time_stamp() - m_e_begin_time) / table_size;
+                    m_t_te = m_t_tc * table_size;
+                    time_code_event.cancel();
+                    time_code_event.notify(m_t_tc - (sc_time_stamp() - m_e_begin_time));
+                }
+                else
+                {
+                    time_code_event.notify(m_t_tc - (sc_time_stamp() - m_tc_begin_time));
+                }
                 continue;
             }
-            if (cur_time == table_size - 1)
+            if (sc_time_stamp() == m_tc_begin_time + m_t_tc) 
             {
+                cur_time++;
+                m_tc_begin_time = sc_time_stamp();
+                if (cur_time == table_size)
+                {
+                    cur_time = 0;
+                    m_e_begin_time = sc_time_stamp();
+                }
                 eop.notify(SC_ZERO_TIME);
-                cur_time = 0;
-                m_t_te = sc_time_stamp() - m_e_begin_time;
-                m_t_tc = m_t_te / table_size;
-                m_tc_begin_time = sc_time_stamp();
-                m_e_begin_time = sc_time_stamp();
-                time_code_event.notify(m_t_tc);
             }
-            else if (cur_time == 0)
-            {
-                m_t_tc += (sc_time_stamp() - m_e_begin_time) / table_size;
-                m_t_te = m_t_tc * table_size;
-                time_code_event.cancel();
-                time_code_event.notify(m_t_tc - (sc_time_stamp() - m_e_begin_time));
-            }
-            else
-            {
-                time_code_event.notify(m_t_tc - (sc_time_stamp() - m_tc_begin_time));
-            }
-            continue;
         }
-        if (sc_time_stamp() == m_tc_begin_time + m_t_tc) 
+        else 
         {
-            cur_time++;
-                m_tc_begin_time = sc_time_stamp();
-            if (cur_time == table_size)
+	        if (mark_h && !time_h)
             {
-                cur_time = 0;
-                m_e_begin_time = sc_time_stamp();
+	            eop.notify(SC_ZERO_TIME);
+                mark_h = false;
+	            if (received_time > cur_time)
+	                cur_time = received_time;
+	            else 
+                {
+	                time_code_event.notify(m_t_tc - (sc_time_stamp() - m_tc_begin_time));
+                    continue;
+                }
+	            m_t_tc = sc_time_stamp() - m_tc_begin_time;
+	            m_tc_begin_time = sc_time_stamp();
+	            time_code_event.notify(m_t_tc);
+                continue;
             }
-            eop.notify(SC_ZERO_TIME);
+	        if (sc_time_stamp() == m_tc_begin_time + m_t_tc) 
+            {
+	            time_h = true;
+                cur_time++;
+                eop.notify(SC_ZERO_TIME);
+	            m_tc_begin_time = sc_time_stamp();
+	        }
+	        if (time_h && mark_h)
+            {
+                m_t_tc += sc_time_stamp() - m_tc_begin_time;
+                time_code_event.cancel();
+                time_h = false; 
+                mark_h = false;
+            }
         }
+       
         time_code_event.notify(m_t_tc);
     }
 }
 
 void node::time_code(int t)
 {
+    received_time = t;
     mark_h = true; 
     time_code_event.notify();
     cout << id << " received tc\n";
@@ -158,7 +196,8 @@ void node::time_code(int t)
 void node::new_time_code(int value)
 {
     cout << id << " send tc\n";
-//    cur_time = value;
+    if (scheduling == 1)
+        cur_time = value;
     have_time_code_to_send = true;
     eop.notify();
 }
@@ -170,7 +209,7 @@ void node::sender()
     {
         wait();
 //////////////////////////////////////////////////////////TODO: check it!
-        if (!(have_fct_to_send || have_time_code_to_send || schedule_table[address][cur_time % table_size] == 1 || receiver_addr != -1))
+        if (!(have_fct_to_send || have_time_code_to_send || scheduling == 0 || schedule_table[id][cur_time % table_size] == 1 || receiver_addr != -1))
             continue;
         symbol s;
         if (have_time_code_to_send) 
@@ -201,14 +240,17 @@ void node::sender()
             fct_port->write_byte(direct, s);
             ready_to_write = false;
         }
-        if (!have_data_to_send && write_buf.nb_read(tmp_byte))
+        if (receiver_addr != -1 || (scheduling == 0 || schedule_table[id][cur_time % table_size] == 1))
         {
-            have_data_to_send = true;
-            if (receiver_addr = -1) 
-                receiver_addr = tmp_byte;
+            if (!have_data_to_send && write_buf.nb_read(tmp_byte))
+            {
+                have_data_to_send = true;
+                if (receiver_addr = -1) 
+                    receiver_addr = tmp_byte;
+            }
+            else if (!have_data_to_send)
+                receiver_addr = -1;
         }
-        else if (!have_data_to_send)
-            receiver_addr = -1;
         if (have_fct_to_send || have_time_code_to_send || (have_data_to_send && ready_to_write))
             r_sender.notify(SC_ZERO_TIME);
     }

@@ -13,6 +13,7 @@ typedef double tick_value_type;
 extern vector<vector<int> > schedule_table;
 extern int table_size;
 extern vector<sc_time> delays;
+extern int scheduling;
 
 enum symbol_type
 {

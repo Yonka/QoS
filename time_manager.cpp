@@ -9,10 +9,12 @@ time_manager::time_manager(sc_module_name mn, node* tm_node) : sc_module(mn), tm
 
 void time_manager::tick()
 {
-    while (true)
+    while (scheduling != 0)
     {
         tm_node->new_time_code(m_tickValue);
         m_tickValue++;
-        wait(m_t_tc * table_size);
+        if (scheduling == 2 )
+            wait(m_t_tc * table_size);
+        else wait(m_t_tc);
     }
 }

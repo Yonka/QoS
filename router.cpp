@@ -187,12 +187,12 @@ void router::redirect_time()
             {
                 if (!dest_for_tc[j])
                     continue;
-                if (ready_to_send[j] && in_proc[j].first == 0)
+                if (/*ready_to_send[j]&& */in_proc[j].first == 0)
                 {
                     in_proc[j].first = 1;
                     in_proc[j].second = sc_time_stamp() + delays[j] * tmp_buf[i].t + delay;
                     free_port.notify(delays[j] * tmp_buf[i].t + delay);
-                    ready_to_send[j] = false;
+//                    ready_to_send[j] = false;         //we don't need fct
                     continue;
                 }
                 if (in_proc[j].first == 1 && in_proc[j].second > sc_time_stamp())

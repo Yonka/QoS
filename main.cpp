@@ -11,6 +11,7 @@ using namespace std;
 vector<vector<int> > schedule_table;
 vector<sc_time> delays;
 int table_size;
+int scheduling;
 int sc_main(int argc, char* argv[])
 {
     int k = 1;
@@ -19,6 +20,7 @@ int sc_main(int argc, char* argv[])
     int nodes, tmp;
     ifstream in;
     in.open("config");
+    in >> scheduling;
     in >> nodes >> table_size;
 
     //filling schedule table
