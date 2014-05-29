@@ -65,6 +65,7 @@ void node::write_byte(int num, symbol s)
     {
         sc_uint<8> data;
         cerr << this-> basename() << " received package: ";
+        GV++;
         while (read_buf.nb_read(data))
             cerr << data << " ";
         cerr << " at " << sc_time_stamp() << "\n";
@@ -235,7 +236,7 @@ void node::sender()
                 receiver_addr = -1;
                 eop.notify(SC_ZERO_TIME);
             }
-            cerr << this->basename() << " send " << tmp_byte << " at " << sc_time_stamp() << "\n";
+//            cerr << this->basename() << " send " << tmp_byte << " at " << sc_time_stamp() << "\n";
             have_data_to_send = false;
             wait(delay * s.t);
             fct_port->write_byte(direct, s);

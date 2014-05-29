@@ -12,6 +12,7 @@ vector<vector<int> > schedule_table;
 vector<sc_time> delays;
 int table_size;
 int scheduling;
+int GV;
 int sc_main(int argc, char* argv[])
 {
     int k = 1;
@@ -101,6 +102,6 @@ int sc_main(int argc, char* argv[])
 
 //    sc_start(0);
     sc_start(60, SC_MS);
-
+    cout << GV;
     return(0);
 }
