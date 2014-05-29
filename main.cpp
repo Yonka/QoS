@@ -40,13 +40,14 @@ int sc_main(int argc, char* argv[])
     {
         double delay_traf, delay_node;
         string name;
-        in >> delay_traf >> delay_node >> name;
+        int direction;
+        in >> delay_traf >> delay_node >> direction >> name;
         delays.push_back(sc_time(delay_node, SC_NS));
         char* a = new char[name.size()];
         a[name.size()] = 0;
         memcpy(a,name.c_str(), name.size());
         trafgen *t0 = new trafgen("trafgen", 10000, sc_time(delay_traf, SC_NS));
-        node *n0 = new node(a, i, (i + 1) % nodes, sc_time(delay_node, SC_NS));
+        node *n0 = new node(a, i, direction, sc_time(delay_node, SC_NS));
         (*t0).out_port(*n0);
         t.push_back(t0);
         n.push_back(n0);
@@ -59,7 +60,11 @@ int sc_main(int argc, char* argv[])
     int ports;
     for (int i = 0; i < num_routers; i++)
     {
-        in >> ports;
+        string name;
+        in >> ports >> name;
+        char* a = new char[name.size()];
+        a[name.size()] = 0;
+        memcpy(a,name.c_str(), name.size());
         vector<int> table;
         int tmp;
         for (int i = 0; i < nodes; i++)
@@ -67,7 +72,7 @@ int sc_main(int argc, char* argv[])
             in >> tmp;
             table.push_back(tmp);
         }
-        router* r = new router("router", nodes + i, ports, sc_time(delay_router, SC_NS), table);
+        router* r = new router(a, i, ports, sc_time(delay_router, SC_NS), table);
         routers.push_back(r);
     }
     for (int i = 0; i < num_routers; i++)
@@ -90,10 +95,12 @@ int sc_main(int argc, char* argv[])
             (*routers[i]).direct[a] = b;
         }
     }
-    time_manager tm("time_manager_node", n[2]);
+    int tm_num;
+    in >> tm_num;
+    time_manager tm("time_manager_node", n[tm_num]);
 
 //    sc_start(0);
-    sc_start(20000, SC_MS);
+    sc_start(60, SC_MS);
 
     return(0);
 }

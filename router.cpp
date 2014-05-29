@@ -21,6 +21,7 @@ router::router(sc_module_name mn, int id,int ports, sc_time delay/* = sc_time(0,
 
 void router::init()
 {
+    cur_time = -1;
     address_destination.resize(ports);
     fill_n(address_destination.begin(), ports, -1);
 
@@ -84,7 +85,7 @@ void router::fct_delayed()
             }
             else
             {
-                cerr << this->basename() << " received fct from " << i << " at "<< sc_time_stamp() << "\n";
+//                cerr << this->basename() << " received fct from " << i << " at "<< sc_time_stamp() << "\n";
                 ready_to_send[i] = true;
                 freed_ports.erase(it);
                 free_port.notify();
@@ -93,35 +94,19 @@ void router::fct_delayed()
     }
 }
 
-//void router::time_code(sc_uint<14> t)
-//{
-//    if (cur_time == t - 1)
-//    {
-//        time_code_event.notify(delay);
-//    }
-//    else
-//        cur_time = t;
-//}
-
-//void router::time_code_delayed()
-//{
-//    cur_time++;
-//    cout << this->basename() << " time " << cur_time << " at " << sc_time_stamp() << "\n";
-//    for (int i = 0; i < num_of_ports; i++)
-//    {
-//        fct_port[i]->time_code(cur_time);
-//    }
-//}
-
 void router::write_byte(int num, symbol s)
 {
-    cerr << this->basename() << " received " << s.data << " on port " << num << " at " << sc_time_stamp() << "\n";
+//    cerr << this->basename() << " received " << s.data << " on port " << num << " at " << sc_time_stamp() << "\n";
     if (s.t == lchar)
     {
-        tmp_buf[num] = s;
-        new_data.notify(SC_ZERO_TIME);
-        fill_n(dest_for_tc.begin(), ports, true);
-        dest_for_tc[num] = false;   //we already have it
+        if (s.data != cur_time)
+        {
+            cur_time = s.data;
+            tmp_buf[num] = s;
+            new_data.notify(SC_ZERO_TIME);
+            fill_n(dest_for_tc.begin(), ports, true);
+            dest_for_tc[num] = false;   //we already have it
+        }
     }
     else
     {
@@ -217,6 +202,7 @@ void router::redirect_time()
             {
                 tmp_buf[i].t = nchar;
                 out_proc[i] = 0;
+                free_port.notify(SC_ZERO_TIME);
 //                fct_port[i]->fct();   //TODO: ask
             }
         }

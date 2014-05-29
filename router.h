@@ -12,6 +12,7 @@ class router : public sc_module, public conn_I
 {
 private:
     int ports;
+    int cur_time;
     vector<symbol> buf, tmp_buf; // input buffer, buffer for tc
     sc_time delay;
 

@@ -5,7 +5,7 @@
 
 trafgen::trafgen(sc_module_name mn, int param = 1, sc_time delay = sc_time(0, SC_NS)) : sc_module(mn), runs(param), delay(delay)
 {
-    packet_size = 4;
+    packet_size = 100;
     srand((unsigned int) time(0));
 
     SC_THREAD(gen_event);

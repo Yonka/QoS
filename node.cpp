@@ -1,6 +1,6 @@
 #include "node.h"
 
-node::node(sc_module_name mn, int id, int addr, sc_time delay = sc_time(0, SC_NS)) : sc_module(mn), id(id), address(addr), delay(delay), write_buf(40), read_buf(40)
+node::node(sc_module_name mn, int id, int addr, sc_time delay = sc_time(0, SC_NS)) : sc_module(mn), id(id), address(addr), delay(delay), write_buf(4000), read_buf(4000)
 {
     ready_to_write = false;
     have_time_code_to_send = false;
@@ -45,7 +45,7 @@ void node::init()
 bool node::write(std::vector<sc_uint<8> >* packet)
 {
 //    cout << "res " << data << " at " << sc_time_stamp() << "\n";
-    if (write_buf.num_free() < (*packet).size() + 1)   //with sender address - delete +1
+    if (write_buf.num_free() < (*packet).size() + 1)   
         return false;
     write_buf.write(address);
     while (!(*packet).empty())
@@ -60,7 +60,7 @@ bool node::write(std::vector<sc_uint<8> >* packet)
 
 void node::write_byte(int num, symbol s)
 {
-    cerr << this->basename() << " received " << s.data << " at " << sc_time_stamp() << "\n";
+//    cerr << this->basename() << " received " << s.data << " at " << sc_time_stamp() << "\n";
     if (s.t == nchar && s.data == EOP_SYMBOL)
     {
         sc_uint<8> data;
@@ -68,6 +68,7 @@ void node::write_byte(int num, symbol s)
         while (read_buf.nb_read(data))
             cerr << data << " ";
         cerr << " at " << sc_time_stamp() << "\n";
+        have_fct_to_send = true;
     }
     else if (s.t == lchar)
     {
@@ -77,8 +78,8 @@ void node::write_byte(int num, symbol s)
     else
     {
         read_buf.write(s.data);
+        have_fct_to_send = true;
     }
-    have_fct_to_send = true;
     eop.notify(SC_ZERO_TIME);
 }
 
@@ -91,7 +92,7 @@ void node::fct_delayed()
 {
     ready_to_write = true;
     fct_event.notify();
-    cerr << this->basename() << " received fct at " << sc_time_stamp() << "\n";
+//    cerr << this->basename() << " received fct at " << sc_time_stamp() << "\n";
 }
 
 void node::change_tc()
@@ -112,20 +113,20 @@ void node::change_tc()
                     time_code_event.notify(m_t_tc);
                     continue;
                 }
-                if (cur_time == table_size - 1)
+                if (cur_time == epoch - 1)
                 {
                     eop.notify(SC_ZERO_TIME);
                     cur_time = 0;
                     m_t_te = sc_time_stamp() - m_e_begin_time;
-                    m_t_tc = m_t_te / table_size;
+                    m_t_tc = m_t_te / epoch;
                     m_tc_begin_time = sc_time_stamp();
                     m_e_begin_time = sc_time_stamp();
                     time_code_event.notify(m_t_tc);
                 }
                 else if (cur_time == 0)
                 {
-                    m_t_tc += (sc_time_stamp() - m_e_begin_time) / table_size;
-                    m_t_te = m_t_tc * table_size;
+                    m_t_tc += (sc_time_stamp() - m_e_begin_time) / epoch;
+                    m_t_te = m_t_tc * epoch;
                     time_code_event.cancel();
                     time_code_event.notify(m_t_tc - (sc_time_stamp() - m_e_begin_time));
                 }
@@ -139,7 +140,7 @@ void node::change_tc()
             {
                 cur_time++;
                 m_tc_begin_time = sc_time_stamp();
-                if (cur_time == table_size)
+                if (cur_time == epoch)
                 {
                     cur_time = 0;
                     m_e_begin_time = sc_time_stamp();
@@ -190,12 +191,12 @@ void node::time_code(int t)
     received_time = t;
     mark_h = true; 
     time_code_event.notify();
-    cout << id << " received tc\n";
+    cerr << id << " received tc\n";
 }
 
 void node::new_time_code(int value)
 {
-    cout << id << " send tc\n";
+    cerr << id << " send tc\n";
     if (scheduling == 1)
         cur_time = value;
     have_time_code_to_send = true;
@@ -245,7 +246,7 @@ void node::sender()
             if (!have_data_to_send && write_buf.nb_read(tmp_byte))
             {
                 have_data_to_send = true;
-                if (receiver_addr = -1) 
+                if (receiver_addr == -1) 
                     receiver_addr = tmp_byte;
             }
             else if (!have_data_to_send)
