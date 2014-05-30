@@ -22,6 +22,7 @@ router::router(sc_module_name mn, int id,int ports, sc_time delay/* = sc_time(0,
 void router::init()
 {
     cur_time = -1;
+    time_source = 0;
     address_destination.resize(ports);
     fill_n(address_destination.begin(), ports, -1);
 
@@ -46,27 +47,14 @@ void router::init()
 
     for (int i = 0; i < ports; i++)
     {
-        buf.push_back(symbol(0,0,nchar));
-        tmp_buf.push_back(symbol(0,0,nchar));
+        data_bufer.push_back(symbol(0,0,0,nchar));
+        time_bufer.push_back(symbol(0,0,0,nchar));
         fct_port.push_back(new sc_port<conn_I>);
     }
-//    srand (time(NULL));
-
-//    int dir;
-//    for (int i = 0; i < 256; i++)
-//    {
-//        dir = rand() % ports;
-//        while (dir == i)
-//        {
-//            dir = rand() % ports;
-//        }
-//        routing_table.push_back(dir);
-//    }
 }
 
 void router::fct(int num)
 {
-//TODO: delays for fct 
     freed_ports.insert(pair<int, sc_time>(num, sc_time_stamp()));
     fct_delayed_event.notify(FCT_SIZE * delays[num]);
 }
@@ -102,8 +90,9 @@ void router::write_byte(int num, symbol s)
         if (s.data != cur_time)
         {
             cur_time = s.data;
-            tmp_buf[num] = s;
+            time_bufer[num] = s;
             new_data.notify(SC_ZERO_TIME);
+            time_source = num;
             fill_n(dest_for_tc.begin(), ports, true);
             dest_for_tc[num] = false;   //we already have it
         }
@@ -116,20 +105,21 @@ void router::write_byte(int num, symbol s)
             address_destination[num] = addr;
         }
         ready_to_redirect[num] = true;
-        buf[num] = s;
+        data_bufer[num] = s;
         new_data.notify(SC_ZERO_TIME);
     }
 }
 
 void router::redirect()
 {
-    redirect_ports();       //free from data
-    redirect_time();        //time
+    redirect_close();       //free from data
+    if (time_bufer[time_source].t == lchar)
+        redirect_time();        //time
     redirect_fct();
     redirect_connect();     //data
 }
 
-void router::redirect_ports()
+void router::redirect_close()
 {
     for (int i = 0; i < ports; i++)
     {
@@ -144,11 +134,11 @@ void router::redirect_ports()
             in_proc[address_destination[i]].first = 0;
             out_proc[i] = 0;
 
-            (*fct_port[address_destination[i]])->write_byte(direct[address_destination[i]], buf[i]);
+            (*fct_port[address_destination[i]])->write_byte(direct[address_destination[i]], data_bufer[i]);
 //            fct_port[i]->fct();       //fct-sending moved to another function
-            dest_for_fct[i] = true;
+            redirecting_fct.insert(i);
             new_data.notify(SC_ZERO_TIME);
-            if (buf[i].data == EOP_SYMBOL)
+            if (data_bufer[i].data == EOP_SYMBOL)
             {
                 address_source[address_destination[i]] = -1;
                 address_destination[i] = -1;
@@ -159,77 +149,72 @@ void router::redirect_ports()
 
 void router::redirect_time()
 {
-    for (int i = 0; i < ports; i++)
+    if ((out_proc[time_source] == 0 || out_proc[time_source] == 1))
     {
-        if (tmp_buf[i].t == lchar)
+        out_proc[time_source] = 1;
+
+        for (int j = 0; j < ports; j++)
         {
-            if (out_proc[i] == 2 || out_proc[i] == 3)
+            if (!dest_for_tc[j])
                 continue;
-
-            out_proc[i] = 1;
-
-            for (int j = 0; j < ports; j++)
+            if (in_proc[j].first == 0)
             {
-                if (!dest_for_tc[j])
-                    continue;
-                if (/*ready_to_send[j]&& */in_proc[j].first == 0)
-                {
-                    in_proc[j].first = 1;
-                    in_proc[j].second = sc_time_stamp() + delays[j] * tmp_buf[i].t + delay;
-                    free_port.notify(delays[j] * tmp_buf[i].t + delay);
-//                    ready_to_send[j] = false;         //we don't need fct
-                    continue;
-                }
-                if (in_proc[j].first == 1 && in_proc[j].second > sc_time_stamp())
-                {
-                    free_port.notify(in_proc[j].second - sc_time_stamp());
-                    continue;
-                }
-                if (in_proc[j].first == 1)
-                {
-                    in_proc[j].first = 0;
-                    dest_for_tc[j] = false;
-                    (*fct_port[j])->write_byte(direct[j], tmp_buf[i]);
-                    //                    fct_port[i]->fct(delay);      //what???
-                }              
-
+                in_proc[j].first = 1;
+                in_proc[j].second = sc_time_stamp() + delays[j] * time_bufer[time_source].t + delay;
+                free_port.notify(delays[j] * time_bufer[time_source].t + delay);
+                continue;
             }
-            bool freed = true;
-            for (int j = 0; j < ports; j++)
-                if (dest_for_tc[j])
-                    freed = false;
-            if (freed)
+            if (in_proc[j].first == 1 && in_proc[j].second > sc_time_stamp())
             {
-                tmp_buf[i].t = nchar;
-                out_proc[i] = 0;
-                free_port.notify(SC_ZERO_TIME);
-//                fct_port[i]->fct();   //TODO: ask
+                free_port.notify(in_proc[j].second - sc_time_stamp());
+                continue;
             }
+            if (in_proc[j].first == 1)
+            {
+                in_proc[j].first = 0;
+                dest_for_tc[j] = false;
+                (*fct_port[j])->write_byte(direct[j], time_bufer[time_source]);
+            }              
+
+        }
+        bool freed = true;
+        for (int j = 0; j < ports; j++)
+            if (dest_for_tc[j])
+                freed = false;
+        if (freed)
+        {
+            time_bufer[time_source].t = nchar;
+            out_proc[time_source] = 0;
+            free_port.notify(SC_ZERO_TIME);
         }
     }
 }
 
 void router::redirect_fct()
 {
-    for (int i = 0; i < ports; i++)
+    for (set<int>::iterator i = redirecting_fct.begin(); i != redirecting_fct.end(); ) 
     {
-        if (dest_for_fct[i] && in_proc[i].first == 0)
+        if (in_proc[*i].first == 0)
         {
-            in_proc[i].first = 2;
-            in_proc[i].second = sc_time_stamp() + delays[i] * FCT_SIZE;
-            dest_for_fct[i] = false;
-            (*fct_port[i])->fct(direct[i]);
+            in_proc[*i].first = 2;
+            in_proc[*i].second = sc_time_stamp() + delays[*i] * FCT_SIZE;
+            (*fct_port[*i])->fct(direct[*i]);
+            i++;
             continue;
         }
-        if (in_proc[i].first == 2 && in_proc[i].second > sc_time_stamp())
+        if (in_proc[*i].first == 2 && in_proc[*i].second > sc_time_stamp())
         {
-            free_port.notify(in_proc[i].second - sc_time_stamp());
+            free_port.notify(in_proc[*i].second - sc_time_stamp());
+            i++;
             continue;
         }
-        if (in_proc[i].first == 2)
+        if (in_proc[*i].first == 2)
         {
-            in_proc[i].first = 0;
+            in_proc[*i].first = 0;
+            redirecting_fct.erase(i++);
         }              
+        else
+            ++i;
     }
 }
 
@@ -239,8 +224,8 @@ void router::redirect_connect()
     {
         if (!inner_connect(i))
             continue;
-        in_proc[address_destination[i]].second = sc_time_stamp() + delays[address_destination[i]] * buf[i].t + delay;
-        new_data.notify(delays[address_destination[i]] * buf[i].t + delay);
+        in_proc[address_destination[i]].second = sc_time_stamp() + delays[address_destination[i]] * data_bufer[i].t + delay;
+        new_data.notify(delays[address_destination[i]] * data_bufer[i].t + delay);
         ready_to_redirect[i] = false;
         ready_to_send[address_destination[i]] = false;
         in_proc[address_destination[i]].first = 3;
@@ -265,8 +250,7 @@ void router::init_fct()
 {
     for (int i = 0; i < ports; i++)
     {
-//        fct_port[i]->fct();       //fct-sending moved to another function
-        dest_for_fct[i] = true;
-        new_data.notify();  //TODO: immediate?
+        redirecting_fct.insert(i);
+        new_data.notify();  //TODO: immediate? why not
     }
 }

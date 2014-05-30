@@ -9,10 +9,11 @@
 using namespace std;
 
 vector<vector<int> > schedule_table;
+vector<vector<int> > traf;
 vector<sc_time> delays;
 int table_size;
 int scheduling;
-int GV;
+vector<int> GV;
 int sc_main(int argc, char* argv[])
 {
     int k = 1;
@@ -26,8 +27,11 @@ int sc_main(int argc, char* argv[])
 
     //filling schedule table
     schedule_table.resize(nodes);
+    GV.resize(nodes, 0);
+    traf.resize(nodes);
     for (int i = 0; i < nodes; i++)
     {
+        traf[i].resize(nodes, 0);
         for (int j = 0; j < table_size; j++)
         {
             in >> tmp;
@@ -47,7 +51,7 @@ int sc_main(int argc, char* argv[])
         char* a = new char[name.size()];
         a[name.size()] = 0;
         memcpy(a,name.c_str(), name.size());
-        trafgen *t0 = new trafgen("trafgen", 10000, sc_time(delay_traf, SC_NS));
+        trafgen *t0 = new trafgen("trafgen", PACKETS, sc_time(delay_traf, SC_NS));
         node *n0 = new node(a, i, direction, sc_time(delay_node, SC_NS));
         (*t0).out_port(*n0);
         t.push_back(t0);
@@ -101,7 +105,22 @@ int sc_main(int argc, char* argv[])
     time_manager tm("time_manager_node", n[tm_num]);
 
 //    sc_start(0);
-    sc_start(60, SC_MS);
-    cout << GV;
+    sc_start(SIM_TIME, SC_MS);
+    int sum = 0;
+    ofstream out;
+    out.open("result");
+    out << scheduling << "\n";
+    for (int i = 0; i < GV.size(); i++)
+    {
+        out << i << ":" << GV[i] << "\n";
+        for (int j = 0; j < nodes; j++)
+        {
+            if (traf[i][j] != 0)
+                out << "\\t" << j << ":\\t" << traf[i][j] << "\n";
+        }
+        sum += GV[i];
+    }
+    out << "\n" << sum;
+    out.close();
     return(0);
 }

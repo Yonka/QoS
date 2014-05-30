@@ -65,9 +65,10 @@ void node::write_byte(int num, symbol s)
     {
         sc_uint<8> data;
         cerr << this-> basename() << " received package: ";
-        GV++;
-        while (read_buf.nb_read(data))
-            cerr << data << " ";
+        traf[id][s.sour]++;
+        GV[id]++;
+        while (read_buf.nb_read(data));
+//            cerr << data << " ";
         cerr << " at " << sc_time_stamp() << "\n";
         have_fct_to_send = true;
     }
@@ -192,7 +193,7 @@ void node::time_code(int t)
     received_time = t;
     mark_h = true; 
     time_code_event.notify();
-    cerr << id << " received tc\n";
+//    cerr << id << " received tc\n";
 }
 
 void node::new_time_code(int value)
@@ -216,7 +217,7 @@ void node::sender()
         symbol s;
         if (have_time_code_to_send) 
         {
-            s = symbol(cur_time, -1, lchar);
+            s = symbol(cur_time, -1, id, lchar);
             cerr << this->basename() << " send tc" << cur_time << " at " << sc_time_stamp() << "\n";
             have_time_code_to_send = false;
             wait(delay * s.t);
@@ -228,30 +229,33 @@ void node::sender()
             fct_port->fct(direct);
             wait(FCT_SIZE * delay);
         }
-        if (have_data_to_send && ready_to_write)
+        if (address != id)
         {
-            s = symbol(tmp_byte, receiver_addr, nchar);
-            if (tmp_byte == EOP_SYMBOL)
+            if (have_data_to_send && ready_to_write)
             {
-                receiver_addr = -1;
-                eop.notify(SC_ZERO_TIME);
+                s = symbol(tmp_byte, receiver_addr, id, nchar);
+                if (tmp_byte == EOP_SYMBOL)
+                {
+                    receiver_addr = -1;
+                    eop.notify(SC_ZERO_TIME);
+                }
+                //            cerr << this->basename() << " send " << tmp_byte << " at " << sc_time_stamp() << "\n";
+                have_data_to_send = false;
+                wait(delay * s.t);
+                fct_port->write_byte(direct, s);
+                ready_to_write = false;
             }
-//            cerr << this->basename() << " send " << tmp_byte << " at " << sc_time_stamp() << "\n";
-            have_data_to_send = false;
-            wait(delay * s.t);
-            fct_port->write_byte(direct, s);
-            ready_to_write = false;
-        }
-        if (receiver_addr != -1 || (scheduling == 0 || schedule_table[id][cur_time % table_size] == 1))
-        {
-            if (!have_data_to_send && write_buf.nb_read(tmp_byte))
+            if (receiver_addr != -1 || (scheduling == 0 || schedule_table[id][cur_time % table_size] == 1))
             {
-                have_data_to_send = true;
-                if (receiver_addr == -1) 
-                    receiver_addr = tmp_byte;
+                if (!have_data_to_send && write_buf.nb_read(tmp_byte))
+                {
+                    have_data_to_send = true;
+                    if (receiver_addr == -1) 
+                        receiver_addr = tmp_byte;
+                }
+                else if (!have_data_to_send)
+                    receiver_addr = -1;
             }
-            else if (!have_data_to_send)
-                receiver_addr = -1;
         }
         if (have_fct_to_send || have_time_code_to_send || (have_data_to_send && ready_to_write))
             r_sender.notify(SC_ZERO_TIME);

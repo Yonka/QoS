@@ -2,6 +2,7 @@
 #define ROUTER_H
 #include "my_interfaces.h"
 #include "systemc.h"
+#include <set>
 #include "defs.h"
 #include <map>
 #include <time.h>
@@ -13,7 +14,8 @@ class router : public sc_module, public conn_I
 private:
     int ports;
     int cur_time;
-    vector<symbol> buf, tmp_buf; // input buffer, buffer for tc
+    int time_source;                        // where time come from
+    vector<symbol> data_bufer, time_bufer;  // input buffer, buffer for tc
     sc_time delay;
 
     vector<int> address_destination;        // if port is sending data, then destination address, -1 otherwise 
@@ -23,6 +25,7 @@ private:
     vector<bool> ready_to_send;             // is an output port ready to send data (received fct)
     vector<int> out_proc;                   // is something redirecting now from this port: 0 - nothing, 1 - lchar, 2 - fct, 3 - nchar
     vector<pair<int, sc_time> > in_proc;    // is something redirecting to this port: -//- and finishing time
+    set<int> redirecting_data, redirecting_fct;
     vector<int> routing_table;
     map<int, sc_time> freed_ports;          // map of ports - num + sending begin-time
     vector<bool> dest_for_tc, dest_for_fct;               // need to send tc 
@@ -33,7 +36,7 @@ private:
 
     void redirect();
 
-    void redirect_ports();
+    void redirect_close();
 
     void redirect_time();
 
