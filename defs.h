@@ -10,9 +10,9 @@ using namespace std;
 #define EOP_SYMBOL 255
 //#define BROADCAST_SYMBOL 255
 #define TICK 500000
-#define SIM_TIME 60
+#define SIM_TIME 64
 #define epoch 64
-#define PACKETS 10
+#define PACKETS 200
 typedef double tick_value_type;
 
 extern vector<vector<int> > schedule_table;

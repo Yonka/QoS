@@ -112,6 +112,8 @@ int sc_main(int argc, char* argv[])
     out << scheduling << "\n";
     for (int i = 0; i < GV.size(); i++)
     {
+        if (GV[i] == 0)
+            continue;
         out << i << ":" << GV[i] << "\n";
         for (int j = 0; j < nodes; j++)
         {

@@ -60,11 +60,11 @@ bool node::write(std::vector<sc_uint<8> >* packet)
 
 void node::write_byte(int num, symbol s)
 {
-//    cerr << this->basename() << " received " << s.data << " at " << sc_time_stamp() << "\n";
+//    cerr << sc_time_stamp() << ": " << this->basename() << " received from " << s.sour << ": " << s.data <<"\n";
     if (s.t == nchar && s.data == EOP_SYMBOL)
     {
         sc_uint<8> data;
-        cerr << this-> basename() << " received package: ";
+        cerr << this-> basename() << " received package from "<< s.sour<<": ";
         traf[id][s.sour]++;
         GV[id]++;
         while (read_buf.nb_read(data));
@@ -199,8 +199,8 @@ void node::time_code(int t)
 void node::new_time_code(int value)
 {
     cerr << id << " send tc\n";
-    if (scheduling == 1)
-        cur_time = value;
+//    if (scheduling == 1)
+//        cur_time = value;
     have_time_code_to_send = true;
     eop.notify();
 }
