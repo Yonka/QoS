@@ -1,10 +1,11 @@
+#include <math.h>
 #include "systemc.h"
 #include "defs.h"
 #include "cstdlib"
 #include "ctime"
 #include "trafgen.h"
 #include "node.h"
-#include "router.h"
+#include "routing_switch.h"
 #include "time_manager.h"
 using namespace std;
 
@@ -14,11 +15,9 @@ vector<sc_time> delays;
 int table_size;
 int scheduling;
 vector<int> GV;
+
 int sc_main(int argc, char* argv[])
 {
-    int k = 1;
-    if (argc == 2)
-        k = atoi(argv[1]);
     int nodes, tmp;
     ifstream in;
     in.open("config");
@@ -61,7 +60,7 @@ int sc_main(int argc, char* argv[])
     in >> num_routers;
     int delay_router;
     in >> delay_router;
-    vector<router*> routers;
+    vector<routing_switch*> routers;
     int ports;
     for (int i = 0; i < num_routers; i++)
     {
@@ -77,7 +76,7 @@ int sc_main(int argc, char* argv[])
             in >> tmp;
             table.push_back(tmp);
         }
-        router* r = new router(a, i, ports, sc_time(delay_router, SC_NS), table);
+        routing_switch* r = new routing_switch(a, i, ports, sc_time(delay_router, SC_NS), table);
         routers.push_back(r);
     }
     for (int i = 0; i < num_routers; i++)
@@ -108,8 +107,9 @@ int sc_main(int argc, char* argv[])
     sc_start(SIM_TIME, SC_MS);
     int sum = 0;
     ofstream out;
-    out.open("result");
+    out.open("resultn2");
     out << scheduling << "\n";
+    int k = 0;
     for (int i = 0; i < GV.size(); i++)
     {
         if (GV[i] == 0)
@@ -118,11 +118,25 @@ int sc_main(int argc, char* argv[])
         for (int j = 0; j < nodes; j++)
         {
             if (traf[i][j] != 0)
-                out << "\\t" << j << ":\\t" << traf[i][j] << "\n";
+            {
+                k++;
+                out << "\t" << j << ":\t" << traf[i][j] << "\n";
+            }
         }
         sum += GV[i];
     }
-    out << "\n" << sum;
+    double x_ = sum / k;
+    double sq_sum = 0;
+    for (int i = 0; i < GV.size(); i++)
+    {
+        for (int j = 0; j < nodes; j++)
+        {
+            if (traf[i][j] != 0)
+                sq_sum += (x_ - traf[i][j]) * (x_ - traf[i][j]);
+        }
+    }
+    double sigma = sqrt(sq_sum / k);
+    out << "\n" << sum << " " << sigma;
     out.close();
     return(0);
 }

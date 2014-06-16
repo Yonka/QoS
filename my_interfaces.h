@@ -14,18 +14,4 @@ public:
     virtual void fct(int num) = 0;
     virtual void write_byte(int num, symbol s) = 0;
 };
-
-//class router_router_I : virtual public sc_interface
-//{
-//public:
-//    virtual void fct(int num) = 0;
-//    virtual void write_byte(int num, symbol s) = 0;
-//};
-
-//class router_node_I : virtual public sc_interface
-//{
-//public:
-//    virtual void fct(int num) = 0;
-//    virtual void write_byte(int num, symbol s) = 0;
-//};
 #endif

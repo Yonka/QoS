@@ -29,15 +29,10 @@ node::node(sc_module_name mn, int id, int addr, sc_time delay = sc_time(0, SC_NS
     SC_THREAD(change_tc);
 //    dont_initialize();
     sensitive << time_code_event;
-
-//    SC_METHOD(time_code_delayed);
-//    dont_initialize();
-//    sensitive << time_code_event;
 }
 
 void node::init()
 {
-//    fct_port->fct(address);
     have_fct_to_send = true;
     eop.notify(SC_ZERO_TIME);
 }
@@ -97,6 +92,91 @@ void node::fct_delayed()
 //    cerr << this->basename() << " received fct at " << sc_time_stamp() << "\n";
 }
 
+void node::change_tc_scheduling1()
+{
+    if (mark_h && !time_h)
+    {
+        eop.notify(SC_ZERO_TIME);
+        mark_h = false;
+        if (received_time > cur_time)
+            cur_time = received_time;
+        else 
+        {
+            time_code_event.notify(m_t_tc - (sc_time_stamp() - m_tc_begin_time));
+            return;
+        }
+        m_t_tc = sc_time_stamp() - m_tc_begin_time;
+        m_tc_begin_time = sc_time_stamp();
+        time_code_event.notify(m_t_tc);
+        return;
+    }
+    if (sc_time_stamp() == m_tc_begin_time + m_t_tc) 
+    {
+        time_h = true;
+        cur_time++;
+        eop.notify(SC_ZERO_TIME);
+        m_tc_begin_time = sc_time_stamp();
+    }
+    if (time_h && mark_h)
+    {
+        m_t_tc += sc_time_stamp() - m_tc_begin_time;
+        time_code_event.cancel();
+        time_h = false; 
+        mark_h = false;
+    }
+    time_code_event.notify(m_t_tc);
+}
+
+void node::change_tc_scheduling2()
+{
+    if (mark_h)
+    {
+        mark_h = false;
+        if (m_e_begin_time == SC_ZERO_TIME)
+        {
+            m_e_begin_time = sc_time_stamp();
+            m_tc_begin_time = sc_time_stamp();
+            time_code_event.cancel();
+            time_code_event.notify(m_t_tc);
+            return;
+        }
+        if (cur_time == epoch - 1)
+        {
+            eop.notify(SC_ZERO_TIME);
+            cur_time = 0;
+            m_t_te = sc_time_stamp() - m_e_begin_time;
+            m_t_tc = m_t_te / epoch;
+            m_tc_begin_time = sc_time_stamp();
+            m_e_begin_time = sc_time_stamp();
+            time_code_event.notify(m_t_tc);
+        }
+        else if (cur_time == 0)
+        {
+            m_t_tc += (sc_time_stamp() - m_e_begin_time) / epoch;
+            m_t_te = m_t_tc * epoch;
+            time_code_event.cancel();
+            time_code_event.notify(m_t_tc - (sc_time_stamp() - m_e_begin_time));
+        }
+        else
+        {
+            time_code_event.notify(m_t_tc - (sc_time_stamp() - m_tc_begin_time));
+        }
+        return;
+    }
+    if (sc_time_stamp() == m_tc_begin_time + m_t_tc) 
+    {
+        cur_time++;
+        m_tc_begin_time = sc_time_stamp();
+        if (cur_time == epoch)
+        {
+            cur_time = 0;
+            m_e_begin_time = sc_time_stamp();
+        }
+        eop.notify(SC_ZERO_TIME);
+    }
+    time_code_event.notify(m_t_tc);
+}
+
 void node::change_tc()
 {
     while (true)
@@ -104,87 +184,12 @@ void node::change_tc()
         wait();
         if (scheduling == 2)
         {
-            if (mark_h)
-            {
-                mark_h = false;
-                if (m_e_begin_time == SC_ZERO_TIME)
-                {
-                    m_e_begin_time = sc_time_stamp();
-                    m_tc_begin_time = sc_time_stamp();
-                    time_code_event.cancel();
-                    time_code_event.notify(m_t_tc);
-                    continue;
-                }
-                if (cur_time == epoch - 1)
-                {
-                    eop.notify(SC_ZERO_TIME);
-                    cur_time = 0;
-                    m_t_te = sc_time_stamp() - m_e_begin_time;
-                    m_t_tc = m_t_te / epoch;
-                    m_tc_begin_time = sc_time_stamp();
-                    m_e_begin_time = sc_time_stamp();
-                    time_code_event.notify(m_t_tc);
-                }
-                else if (cur_time == 0)
-                {
-                    m_t_tc += (sc_time_stamp() - m_e_begin_time) / epoch;
-                    m_t_te = m_t_tc * epoch;
-                    time_code_event.cancel();
-                    time_code_event.notify(m_t_tc - (sc_time_stamp() - m_e_begin_time));
-                }
-                else
-                {
-                    time_code_event.notify(m_t_tc - (sc_time_stamp() - m_tc_begin_time));
-                }
-                continue;
-            }
-            if (sc_time_stamp() == m_tc_begin_time + m_t_tc) 
-            {
-                cur_time++;
-                m_tc_begin_time = sc_time_stamp();
-                if (cur_time == epoch)
-                {
-                    cur_time = 0;
-                    m_e_begin_time = sc_time_stamp();
-                }
-                eop.notify(SC_ZERO_TIME);
-            }
+            change_tc_scheduling2();
         }
         else 
         {
-	        if (mark_h && !time_h)
-            {
-	            eop.notify(SC_ZERO_TIME);
-                mark_h = false;
-	            if (received_time > cur_time)
-	                cur_time = received_time;
-	            else 
-                {
-	                time_code_event.notify(m_t_tc - (sc_time_stamp() - m_tc_begin_time));
-                    continue;
-                }
-	            m_t_tc = sc_time_stamp() - m_tc_begin_time;
-	            m_tc_begin_time = sc_time_stamp();
-	            time_code_event.notify(m_t_tc);
-                continue;
-            }
-	        if (sc_time_stamp() == m_tc_begin_time + m_t_tc) 
-            {
-	            time_h = true;
-                cur_time++;
-                eop.notify(SC_ZERO_TIME);
-	            m_tc_begin_time = sc_time_stamp();
-	        }
-	        if (time_h && mark_h)
-            {
-                m_t_tc += sc_time_stamp() - m_tc_begin_time;
-                time_code_event.cancel();
-                time_h = false; 
-                mark_h = false;
-            }
+            change_tc_scheduling1();
         }
-       
-        time_code_event.notify(m_t_tc);
     }
 }
 
@@ -207,12 +212,13 @@ void node::new_time_code(int value)
 
 void node::sender()
 {
-    int receiver_addr = -1; /////////////////////ok?
+    int receiver_addr = -1;
     while (true)
     {
         wait();
 //////////////////////////////////////////////////////////TODO: check it!
-        if (!(have_fct_to_send || have_time_code_to_send || scheduling == 0 || schedule_table[id][cur_time % table_size] == 1 || receiver_addr != -1))
+        if (!(have_fct_to_send || have_time_code_to_send || scheduling == 0 || 
+            schedule_table[id][cur_time % table_size] == 1 || receiver_addr != -1))
             continue;
         symbol s;
         if (have_time_code_to_send) 

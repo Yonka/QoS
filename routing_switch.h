@@ -1,21 +1,21 @@
 #ifndef ROUTER_H
 #define ROUTER_H
 #include "my_interfaces.h"
+#include "defs.h"
 #include "systemc.h"
 #include <set>
-#include "defs.h"
 #include <map>
 #include <time.h>
 
 using namespace std;
 
-class router : public sc_module, public conn_I
+class routing_switch : public sc_module, public conn_I
 {
 private:
     int ports;
     int cur_time;
     int time_source;                        // where time come from
-    vector<symbol> data_bufer, time_bufer;  // input buffer, buffer for tc
+    vector<symbol> data_buffer, time_buffer;  // input buffer, buffer for tc
     sc_time delay;
 
     vector<int> address_destination;        // if port is sending data, then destination address, -1 otherwise 
@@ -23,12 +23,14 @@ private:
 
     vector<int> address_source;             // if port is receiving data, then source address, -1 otherwise 
     vector<bool> ready_to_send;             // is an output port ready to send data (received fct)
+
     vector<int> out_proc;                   // is something redirecting now from this port: 0 - nothing, 1 - lchar, 2 - fct, 3 - nchar
     vector<pair<int, sc_time> > in_proc;    // is something redirecting to this port: -//- and finishing time
+
     set<int> redirecting_data, redirecting_fct;
     vector<int> routing_table;
     map<int, sc_time> freed_ports;          // map of ports - num + sending begin-time
-    vector<bool> dest_for_tc, dest_for_fct;               // need to send tc 
+    vector<bool> dest_for_tc, dest_for_fct; // need to send TC 
     sc_event new_data, free_port;           // we have data for redirection or any out-port received fct
     sc_event fct_delayed_event, time_code_event;    
 
@@ -42,7 +44,7 @@ private:
 
     void redirect_fct();
 
-    void redirect_connect();
+    void redirect_data();
 
     bool inner_connect(int x);
 
@@ -53,8 +55,9 @@ private:
 public:
     int id;
     vector<int> direct;
-    SC_HAS_PROCESS(router);
-    router(sc_module_name mn, int id, int ports, sc_time delay, vector<int> table);
+
+    SC_HAS_PROCESS(routing_switch);
+    routing_switch(sc_module_name mn, int id, int ports, sc_time delay, vector<int> table);
 
     vector<sc_port<conn_I>*> fct_port;   // output ports
 

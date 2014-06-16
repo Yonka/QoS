@@ -13,7 +13,6 @@ public:
     bool success;
 
     SC_HAS_PROCESS(trafgen);
-    
     trafgen(sc_module_name mn, int param, sc_time delay);
 
     void gen_event();

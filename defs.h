@@ -8,7 +8,6 @@ using namespace std;
 
 #define FCT_SIZE 4
 #define EOP_SYMBOL 255
-//#define BROADCAST_SYMBOL 255
 #define TICK 500000
 #define SIM_TIME 64
 #define epoch 64
