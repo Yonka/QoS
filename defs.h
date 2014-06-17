@@ -11,7 +11,7 @@ using namespace std;
 #define TICK 500000
 #define SIM_TIME 64
 #define epoch 64
-#define PACKETS 200
+#define PACKETS 20000
 typedef double tick_value_type;
 
 extern vector<vector<int> > schedule_table;
@@ -20,6 +20,7 @@ extern vector<sc_time> delays;
 extern int scheduling;
 extern vector<int> GV; 
 extern vector<vector<int> > traf;
+extern int stat_n, stat_m, stat_k;
 
 enum symbol_type
 {

@@ -17,6 +17,7 @@ routing_switch::routing_switch(sc_module_name mn, int id,int ports, sc_time dela
 
 void routing_switch::init()
 {
+    std::srand ( unsigned ( std::time(0) ) );
     cur_time = -1;
     time_source = 0;
     address_destination.resize(ports);
@@ -25,8 +26,11 @@ void routing_switch::init()
     address_source.resize(ports);
     fill_n(address_source.begin(), ports, -1);
 
+    processed.resize(ports);
+    fill_n(processed.begin(), ports, 0);
+
     ready_to_send.resize(ports);
-    fill_n(ready_to_send.begin(), ports, false);
+    fill_n(ready_to_send.begin(), ports, 0);
 
     ready_to_redirect.resize(ports);
     fill_n(ready_to_redirect.begin(), ports, false);
@@ -43,7 +47,8 @@ void routing_switch::init()
 
     for (int i = 0; i < ports; i++)
     {
-        data_buffer.push_back(symbol(0,0,0,nchar));
+        queue<symbol> t;
+        data_buffer.push_back(t);
         time_buffer.push_back(symbol(0,0,0,nchar));
         fct_port.push_back(new sc_port<conn_I>);
     }
@@ -51,6 +56,7 @@ void routing_switch::init()
 
 void routing_switch::fct(int num)
 {
+    stat_n++;
     freed_ports.insert(pair<int, sc_time>(num, sc_time_stamp()));
     fct_delayed_event.notify(FCT_SIZE * delays[num]);
 }
@@ -70,7 +76,7 @@ void routing_switch::fct_delayed()
             else
             {
 //                cerr << this->basename() << " received fct from " << i << " at "<< sc_time_stamp() << "\n";
-                ready_to_send[i] = true;
+                ready_to_send[i] = 8;
                 freed_ports.erase(it);
                 free_port.notify();
             }
@@ -83,6 +89,7 @@ void routing_switch::write_byte(int num, symbol s)
 //    cerr << this->basename() << " received " << s.data << " on port " << num << " at " << sc_time_stamp() << "\n";
     if (s.t == lchar)
     {
+        stat_k++;
         if (s.data != cur_time)
         {
             cur_time = s.data;
@@ -95,13 +102,13 @@ void routing_switch::write_byte(int num, symbol s)
     }
     else
     {
+        stat_m++;
        if (address_destination[num] == -1)
         {
             int addr = routing_table[s.addr];
             address_destination[num] = addr;
         }
-        ready_to_redirect[num] = true;
-        data_buffer[num] = s;
+        data_buffer[num].push(s);
         new_data.notify(SC_ZERO_TIME);
     }
 }
@@ -112,7 +119,7 @@ void routing_switch::redirect()
     if (time_buffer[time_source].t == lchar)
         redirect_time();        //time
     redirect_fct();
-    redirect_data();         //data
+    redirect_data();            //data
 }
 
 void routing_switch::redirect_close()
@@ -130,14 +137,20 @@ void routing_switch::redirect_close()
             in_proc[address_destination[i]].first = 0;
             out_proc[i] = 0;
 
-            (*fct_port[address_destination[i]])->write_byte(direct[address_destination[i]], data_buffer[i]);
-            redirecting_fct.insert(i);
+            (*fct_port[address_destination[i]])->write_byte(direct[address_destination[i]], data_buffer[i].front());
+            processed[i]++;
+            if (processed[i] == 8)
+            {
+                redirecting_fct.insert(i);
+                processed[i] = 0;
+            }
             new_data.notify(SC_ZERO_TIME);
-            if (data_buffer[i].data == EOP_SYMBOL)
+            if (data_buffer[i].front().data == EOP_SYMBOL)
             {
                 address_source[address_destination[i]] = -1;
                 address_destination[i] = -1;
             }
+            data_buffer[i].pop();
         }
     }
 }
@@ -214,14 +227,17 @@ void routing_switch::redirect_fct()
 
 void routing_switch::redirect_data()
 {
-    for (int i = 0; i < ports; i++)
+    vector<int> shuffled;
+    for (int i = 0; i < ports; i++) shuffled.push_back(i);
+    std::random_shuffle(shuffled.begin(), shuffled.end());
+    for (int j = 0; j < ports; j++)
     {
+        int i = shuffled[j];
         if (!inner_connect(i))
             continue;
-        in_proc[address_destination[i]].second = sc_time_stamp() + delays[address_destination[i]] * data_buffer[i].t + delay;
-        new_data.notify(delays[address_destination[i]] * data_buffer[i].t + delay);
-        ready_to_redirect[i] = false;
-        ready_to_send[address_destination[i]] = false;
+        in_proc[address_destination[i]].second = sc_time_stamp() + delays[address_destination[i]] * data_buffer[i].front().t + delay;
+        new_data.notify(delays[address_destination[i]] * data_buffer[i].front().t + delay);
+        ready_to_send[address_destination[i]]--;
         in_proc[address_destination[i]].first = 3;
         out_proc[i] = 3;
     }
@@ -229,13 +245,13 @@ void routing_switch::redirect_data()
 
 bool routing_switch::inner_connect(int x)
 {
-    if (address_destination[x] == -1 || !ready_to_redirect[x])
+    if (address_destination[x] == -1 || data_buffer[x].size() == 0)
         return false;
     if (address_source[address_destination[x]] == -1)
         address_source[address_destination[x]] = x;
     if (in_proc[address_destination[x]].first != 0 || out_proc[x] != 0)
         return false;
-    if (address_source[address_destination[x]] != x || !ready_to_send[address_destination[x]])
+    if (address_source[address_destination[x]] != x || ready_to_send[address_destination[x]] == 0)
         return false;
     return true;
 }

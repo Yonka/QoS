@@ -3,9 +3,11 @@
 #include "my_interfaces.h"
 #include "defs.h"
 #include "systemc.h"
+#include <algorithm>
 #include <set>
 #include <map>
-#include <time.h>
+#include <ctime>
+#include <queue>
 
 using namespace std;
 
@@ -15,14 +17,16 @@ private:
     int ports;
     int cur_time;
     int time_source;                        // where time come from
-    vector<symbol> data_buffer, time_buffer;  // input buffer, buffer for tc
+    vector<queue<symbol> > data_buffer;     // input buffer
+    vector<symbol> time_buffer;             // buffer for tc
     sc_time delay;
 
     vector<int> address_destination;        // if port is sending data, then destination address, -1 otherwise 
     vector<bool> ready_to_redirect;         // port has actual data to redirect
+    vector<int> processed;                  // how many symbols passed through this port (shouldn't we send fct?)
 
     vector<int> address_source;             // if port is receiving data, then source address, -1 otherwise 
-    vector<bool> ready_to_send;             // is an output port ready to send data (received fct)
+    vector<int> ready_to_send;              // is an output port ready to send data (received fct)
 
     vector<int> out_proc;                   // is something redirecting now from this port: 0 - nothing, 1 - lchar, 2 - fct, 3 - nchar
     vector<pair<int, sc_time> > in_proc;    // is something redirecting to this port: -//- and finishing time

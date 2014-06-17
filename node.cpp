@@ -2,7 +2,8 @@
 
 node::node(sc_module_name mn, int id, int addr, sc_time delay = sc_time(0, SC_NS)) : sc_module(mn), id(id), address(addr), delay(delay), write_buf(4000), read_buf(4000)
 {
-    ready_to_write = false;
+    ready_to_write = 0;
+    processed = 0;
     have_time_code_to_send = false;
     have_fct_to_send = false;
     have_data_to_send = false;
@@ -58,6 +59,7 @@ void node::write_byte(int num, symbol s)
 //    cerr << sc_time_stamp() << ": " << this->basename() << " received from " << s.sour << ": " << s.data <<"\n";
     if (s.t == nchar && s.data == EOP_SYMBOL)
     {
+        stat_m++;
         sc_uint<8> data;
         cerr << this-> basename() << " received package from "<< s.sour<<": ";
         traf[id][s.sour]++;
@@ -65,29 +67,38 @@ void node::write_byte(int num, symbol s)
         while (read_buf.nb_read(data));
 //            cerr << data << " ";
         cerr << " at " << sc_time_stamp() << "\n";
-        have_fct_to_send = true;
+        processed++;
     }
     else if (s.t == lchar)
     {
+        stat_k++;
         time_code(s.data);
 //TODO
     }
     else
     {
+        stat_m++;
         read_buf.write(s.data);
-        have_fct_to_send = true;
+        processed++;
     }
     eop.notify(SC_ZERO_TIME);
+    if (processed == 8) 
+    {
+        have_fct_to_send = true;
+        processed = 0;
+    }
+
 }
 
 void node::fct(int num)
 {
      fct_delayed_event.notify(FCT_SIZE * delay);
+     stat_n++;
 }
 
 void node::fct_delayed()
 {
-    ready_to_write = true;
+    ready_to_write = 8;
     fct_event.notify();
 //    cerr << this->basename() << " received fct at " << sc_time_stamp() << "\n";
 }
@@ -237,7 +248,7 @@ void node::sender()
         }
         if (address != id)
         {
-            if (have_data_to_send && ready_to_write)
+            if (have_data_to_send && ready_to_write !=0)
             {
                 s = symbol(tmp_byte, receiver_addr, id, nchar);
                 if (tmp_byte == EOP_SYMBOL)
@@ -249,7 +260,7 @@ void node::sender()
                 have_data_to_send = false;
                 wait(delay * s.t);
                 fct_port->write_byte(direct, s);
-                ready_to_write = false;
+                ready_to_write--;
             }
             if (receiver_addr != -1 || (scheduling == 0 || schedule_table[id][cur_time % table_size] == 1))
             {
@@ -263,7 +274,7 @@ void node::sender()
                     receiver_addr = -1;
             }
         }
-        if (have_fct_to_send || have_time_code_to_send || (have_data_to_send && ready_to_write))
+        if (have_fct_to_send || have_time_code_to_send || (have_data_to_send && ready_to_write != 0))
             r_sender.notify(SC_ZERO_TIME);
     }
 }

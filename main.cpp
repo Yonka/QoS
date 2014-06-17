@@ -15,6 +15,7 @@ vector<sc_time> delays;
 int table_size;
 int scheduling;
 vector<int> GV;
+int stat_n, stat_m, stat_k;
 
 int sc_main(int argc, char* argv[])
 {
@@ -23,7 +24,7 @@ int sc_main(int argc, char* argv[])
     in.open("config");
     in >> scheduling;
     in >> nodes >> table_size;
-
+    stat_n = 0; stat_m = 0; stat_k = 0;
     //filling schedule table
     schedule_table.resize(nodes);
     GV.resize(nodes, 0);
@@ -107,7 +108,7 @@ int sc_main(int argc, char* argv[])
     sc_start(SIM_TIME, SC_MS);
     int sum = 0;
     ofstream out;
-    out.open("resultn2");
+    out.open("result_suffle_stat0");
     out << scheduling << "\n";
     int k = 0;
     for (int i = 0; i < GV.size(); i++)
@@ -136,7 +137,10 @@ int sc_main(int argc, char* argv[])
         }
     }
     double sigma = sqrt(sq_sum / k);
-    out << "\n" << sum << " " << sigma;
+    out << "\n" << sum << " " << sigma << "\n";
+    out << stat_n << " " << stat_m << " "  << stat_k << "\n";
+    out << (double)stat_m * 8 / (4 * (double)stat_n + 10 * (double)stat_m + 14 * (double)stat_k) << "\n";
+    out << (double)stat_m * 10 / (4 * (double)stat_n + 10 * (double)stat_m + 14 * (double)stat_k )<< "\n";
     out.close();
     return(0);
 }

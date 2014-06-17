@@ -19,7 +19,7 @@ private:
     sc_time m_t_tc, m_t_te, m_tc_begin_time, m_e_begin_time; //t_tc value, prev t_tc value, interval beginning time, 
     bool have_time_code_to_send, have_data_to_send, have_fct_to_send;
     sc_fifo<sc_uint<8> > read_buf;
-    bool ready_to_write;    //got fct?
+    int ready_to_write, processed;    //got fct?
     bool mark_h, time_h;    //tick & timer
 
     void change_tc();
