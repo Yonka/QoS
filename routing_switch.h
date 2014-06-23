@@ -36,7 +36,7 @@ private:
     map<int, sc_time> freed_ports;          // map of ports - num + sending begin-time
     vector<bool> dest_for_tc, dest_for_fct; // need to send TC 
     sc_event new_data, free_port;           // we have data for redirection or any out-port received fct
-    sc_event fct_delayed_event, time_code_event;    
+    sc_event fct_delayed_event;    
 
     void fct_delayed();
 

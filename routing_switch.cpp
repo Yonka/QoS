@@ -90,20 +90,20 @@ void routing_switch::write_byte(int num, symbol s)
     if (s.t == lchar)
     {
         stat_k++;
-        if (s.data != cur_time)
+        if (s.data == (cur_time + 1) % 64)
         {
-            cur_time = s.data;
             time_buffer[num] = s;
             new_data.notify(SC_ZERO_TIME);
             time_source = num;
             fill_n(dest_for_tc.begin(), ports, true);
             dest_for_tc[num] = false;   //we already have it
         }
+        cur_time = s.data;
     }
     else
     {
         stat_m++;
-       if (address_destination[num] == -1)
+        if (address_destination[num] == -1)
         {
             int addr = routing_table[s.addr];
             address_destination[num] = addr;

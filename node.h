@@ -4,6 +4,7 @@
 #include "my_interfaces.h"
 #include "systemc.h"
 #include "defs.h"
+#include "QoS.h"
 #include <vector>
 
 using namespace std;
@@ -13,20 +14,13 @@ class node : public sc_module, public writeI, public conn_I
 private:
     sc_fifo<sc_uint<8> > write_buf;
     sc_uint<8> tmp_byte;
-    sc_event eop, fct_event, fct_delayed_event, time_code_event, r_sender;
+    sc_event eop, fct_event, fct_delayed_event, r_sender;
     sc_time delay;
-    int cur_time, received_time, address;
-    sc_time m_t_tc, m_t_te, m_tc_begin_time, m_e_begin_time; //t_tc value, prev t_tc value, interval beginning time, 
+    int received_time, address;
     bool have_time_code_to_send, have_data_to_send, have_fct_to_send;
     sc_fifo<sc_uint<8> > read_buf;
     int ready_to_write, processed;    //got fct?
-    bool mark_h, time_h;    //tick & timer
-
-    void change_tc();
-
-    void change_tc_scheduling1();
-
-    void change_tc_scheduling2();
+    QoS m_QoS;
 
     void sender();
 
@@ -46,8 +40,6 @@ public:
     virtual void write_byte(int num, symbol s);
 
     virtual void fct(int num);
-
-    virtual void time_code(int t);
 
     void init();
 

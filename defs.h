@@ -14,8 +14,8 @@ using namespace std;
 #define PACKETS 20000
 typedef double tick_value_type;
 
-extern vector<vector<int> > schedule_table;
-extern int table_size;
+//extern vector<vector<int> > schedule_table;
+//extern int table_size;
 extern vector<sc_time> delays;
 extern int scheduling;
 extern vector<int> GV; 
@@ -31,10 +31,10 @@ enum symbol_type
 struct symbol {
     int data;
     int addr;
-    int sour;
+    int source;
     symbol_type t;
     symbol(){};
-    symbol(int data, int addr, int sour, symbol_type t): data(data), addr(addr), sour(sour), t(t) {};
+    symbol(int data, int addr, int source, symbol_type t): data(data), addr(addr), source(source), t(t) {};
 };
 
 

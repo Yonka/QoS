@@ -1,22 +1,15 @@
 #include "node.h"
 
-node::node(sc_module_name mn, int id, int addr, sc_time delay = sc_time(0, SC_NS)) : sc_module(mn), id(id), address(addr), delay(delay), write_buf(4000), read_buf(4000)
+node::node(sc_module_name mn, int id, int addr, sc_time delay = sc_time(0, SC_NS)) 
+    : sc_module(mn), id(id), address(addr), delay(delay), write_buf(4000), read_buf(4000)
 {
+//    m_QoS = new QoS("QoS", 0); 
     ready_to_write = 0;
     processed = 0;
     have_time_code_to_send = false;
     have_fct_to_send = false;
     have_data_to_send = false;
-    cur_time = 0;
-    m_tc_begin_time = sc_time(0, SC_NS);
-    mark_h = false;
-    time_h = false;
 
-    m_t_tc = sc_time(TICK, SC_NS);
-    m_t_te = m_t_tc * table_size;
-    m_e_begin_time = SC_ZERO_TIME;
-    m_tc_begin_time = SC_ZERO_TIME;
-    time_code_event.notify(m_t_tc);
     SC_METHOD(init);
     
     SC_THREAD(sender);
@@ -26,10 +19,6 @@ node::node(sc_module_name mn, int id, int addr, sc_time delay = sc_time(0, SC_NS
     SC_METHOD(fct_delayed);
     dont_initialize();
     sensitive << fct_delayed_event;
-
-    SC_THREAD(change_tc);
-//    dont_initialize();
-    sensitive << time_code_event;
 }
 
 void node::init()
@@ -61,8 +50,8 @@ void node::write_byte(int num, symbol s)
     {
         stat_m++;
         sc_uint<8> data;
-        cerr << this-> basename() << " received package from "<< s.sour<<": ";
-        traf[id][s.sour]++;
+        cerr << this-> basename() << " received package from "<< s.source<<": ";
+        traf[id][s.source]++;
         GV[id]++;
         while (read_buf.nb_read(data));
 //            cerr << data << " ";
@@ -72,8 +61,7 @@ void node::write_byte(int num, symbol s)
     else if (s.t == lchar)
     {
         stat_k++;
-        time_code(s.data);
-//TODO
+        m_QoS.got_time_code(s.data);
     }
     else
     {
@@ -87,7 +75,6 @@ void node::write_byte(int num, symbol s)
         have_fct_to_send = true;
         processed = 0;
     }
-
 }
 
 void node::fct(int num)
@@ -101,115 +88,6 @@ void node::fct_delayed()
     ready_to_write = 8;
     fct_event.notify();
 //    cerr << this->basename() << " received fct at " << sc_time_stamp() << "\n";
-}
-
-void node::change_tc_scheduling1()
-{
-    if (mark_h && !time_h)
-    {
-        eop.notify(SC_ZERO_TIME);
-        mark_h = false;
-        if (received_time > cur_time)
-            cur_time = received_time;
-        else 
-        {
-            time_code_event.notify(m_t_tc - (sc_time_stamp() - m_tc_begin_time));
-            return;
-        }
-        m_t_tc = sc_time_stamp() - m_tc_begin_time;
-        m_tc_begin_time = sc_time_stamp();
-        time_code_event.notify(m_t_tc);
-        return;
-    }
-    if (sc_time_stamp() == m_tc_begin_time + m_t_tc) 
-    {
-        time_h = true;
-        cur_time++;
-        eop.notify(SC_ZERO_TIME);
-        m_tc_begin_time = sc_time_stamp();
-    }
-    if (time_h && mark_h)
-    {
-        m_t_tc += sc_time_stamp() - m_tc_begin_time;
-        time_code_event.cancel();
-        time_h = false; 
-        mark_h = false;
-    }
-    time_code_event.notify(m_t_tc);
-}
-
-void node::change_tc_scheduling2()
-{
-    if (mark_h)
-    {
-        mark_h = false;
-        if (m_e_begin_time == SC_ZERO_TIME)
-        {
-            m_e_begin_time = sc_time_stamp();
-            m_tc_begin_time = sc_time_stamp();
-            time_code_event.cancel();
-            time_code_event.notify(m_t_tc);
-            return;
-        }
-        if (cur_time == epoch - 1)
-        {
-            eop.notify(SC_ZERO_TIME);
-            cur_time = 0;
-            m_t_te = sc_time_stamp() - m_e_begin_time;
-            m_t_tc = m_t_te / epoch;
-            m_tc_begin_time = sc_time_stamp();
-            m_e_begin_time = sc_time_stamp();
-            time_code_event.notify(m_t_tc);
-        }
-        else if (cur_time == 0)
-        {
-            m_t_tc += (sc_time_stamp() - m_e_begin_time) / epoch;
-            m_t_te = m_t_tc * epoch;
-            time_code_event.cancel();
-            time_code_event.notify(m_t_tc - (sc_time_stamp() - m_e_begin_time));
-        }
-        else
-        {
-            time_code_event.notify(m_t_tc - (sc_time_stamp() - m_tc_begin_time));
-        }
-        return;
-    }
-    if (sc_time_stamp() == m_tc_begin_time + m_t_tc) 
-    {
-        cur_time++;
-        m_tc_begin_time = sc_time_stamp();
-        if (cur_time == epoch)
-        {
-            cur_time = 0;
-            m_e_begin_time = sc_time_stamp();
-        }
-        eop.notify(SC_ZERO_TIME);
-    }
-    time_code_event.notify(m_t_tc);
-}
-
-void node::change_tc()
-{
-    while (true)
-    {
-        wait();
-        if (scheduling == 2)
-        {
-            change_tc_scheduling2();
-        }
-        else 
-        {
-            change_tc_scheduling1();
-        }
-    }
-}
-
-void node::time_code(int t)
-{
-    received_time = t;
-    mark_h = true; 
-    time_code_event.notify();
-//    cerr << id << " received tc\n";
 }
 
 void node::new_time_code(int value)
@@ -228,14 +106,13 @@ void node::sender()
     {
         wait();
 //////////////////////////////////////////////////////////TODO: check it!
-        if (!(have_fct_to_send || have_time_code_to_send || scheduling == 0 || 
-            schedule_table[id][cur_time % table_size] == 1 || receiver_addr != -1))
+        if (!(have_fct_to_send || have_time_code_to_send || m_QoS.can_send() || receiver_addr != -1))
             continue;
         symbol s;
         if (have_time_code_to_send) 
         {
-            s = symbol(cur_time, -1, id, lchar);
-            cerr << this->basename() << " send tc" << cur_time << " at " << sc_time_stamp() << "\n";
+            s = symbol(m_QoS.get_time_code(), -1, id, lchar);
+            cerr << this->basename() << " send tc" << m_QoS.get_time_code() << " at " << sc_time_stamp() << "\n";
             have_time_code_to_send = false;
             wait(delay * s.t);
             fct_port->write_byte(direct, s);
@@ -262,7 +139,7 @@ void node::sender()
                 fct_port->write_byte(direct, s);
                 ready_to_write--;
             }
-            if (receiver_addr != -1 || (scheduling == 0 || schedule_table[id][cur_time % table_size] == 1))
+            if (receiver_addr != -1 || m_QoS.can_send())
             {
                 if (!have_data_to_send && write_buf.nb_read(tmp_byte))
                 {

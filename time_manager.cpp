@@ -11,10 +11,11 @@ void time_manager::tick()
 {
     while (scheduling != 0)
     {
-        tm_node->new_time_code(m_tickValue);
+        if (m_tickValue != 1 && m_tickValue != 2)
+            tm_node->new_time_code(m_tickValue);
         m_tickValue++;
         if (scheduling == 2 )
-            wait(m_t_tc * table_size);
-        else wait(m_t_tc);
+            wait(tm_node->m_QoS.get_te());
+        else wait(tm_node->m_QoS.get_tc());
     }
 }
