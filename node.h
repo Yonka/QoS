@@ -1,15 +1,18 @@
-#ifndef RECEIVER_H
-#define RECEIVER_H
+#ifndef NODE_H
+#define NODE_H
+
+#include "systemc.h"
+#include <vector>
 
 #include "my_interfaces.h"
-#include "systemc.h"
 #include "defs.h"
 #include "QoS.h"
-#include <vector>
+#include "node_QoS_if.h"
+#include "QoS_node_if.h"
 
 using namespace std;
 
-class node : public sc_module, public writeI, public conn_I
+class node : public sc_module, public writeI, public conn_I, public QoS_node_if
 {
 private:
     sc_fifo<sc_uint<8> > write_buf;
@@ -17,10 +20,9 @@ private:
     sc_event eop, fct_event, fct_delayed_event, r_sender;
     sc_time delay;
     int received_time, address;
-    bool have_time_code_to_send, have_data_to_send, have_fct_to_send;
+    bool have_time_code_to_send, have_data_to_send, have_fct_to_send, can_send;
     sc_fifo<sc_uint<8> > read_buf;
     int ready_to_write, processed;    //got fct?
-    QoS m_QoS;
 
     void sender();
 
@@ -30,7 +32,9 @@ private:
 
 public:
     int id, direct;
+    QoS* m_QoS;
     sc_port<conn_I> fct_port;
+    sc_port<node_QoS_if> node_QoS_port;
 
     SC_HAS_PROCESS(node);
     node(sc_module_name mn, int id, int addr, sc_time delay);
@@ -40,6 +44,10 @@ public:
     virtual void write_byte(int num, symbol s);
 
     virtual void fct(int num);
+
+    virtual void ban_sending();
+
+    virtual void unban_sending();
 
     void init();
 

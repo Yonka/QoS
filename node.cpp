@@ -3,8 +3,10 @@
 node::node(sc_module_name mn, int id, int addr, sc_time delay = sc_time(0, SC_NS)) 
     : sc_module(mn), id(id), address(addr), delay(delay), write_buf(4000), read_buf(4000)
 {
-//    m_QoS = new QoS("QoS", 0); 
+    m_QoS = new QoS("QoS", this, 0); 
+    node_QoS_port(*m_QoS);
     ready_to_write = 0;
+    can_send = true;
     processed = 0;
     have_time_code_to_send = false;
     have_fct_to_send = false;
@@ -61,7 +63,7 @@ void node::write_byte(int num, symbol s)
     else if (s.t == lchar)
     {
         stat_k++;
-        m_QoS.got_time_code(s.data);
+        node_QoS_port->got_time_code(s.data);
     }
     else
     {
@@ -99,6 +101,18 @@ void node::new_time_code(int value)
     eop.notify();
 }
 
+void node::ban_sending()
+{
+    can_send = false;
+    eop.notify(SC_ZERO_TIME);
+}
+
+void node::unban_sending()
+{
+    can_send = true;
+    eop.notify(SC_ZERO_TIME);
+}
+
 void node::sender()
 {
     int receiver_addr = -1;
@@ -106,13 +120,13 @@ void node::sender()
     {
         wait();
 //////////////////////////////////////////////////////////TODO: check it!
-        if (!(have_fct_to_send || have_time_code_to_send || m_QoS.can_send() || receiver_addr != -1))
+        if (!(have_fct_to_send || have_time_code_to_send || can_send || receiver_addr != -1))
             continue;
         symbol s;
         if (have_time_code_to_send) 
         {
-            s = symbol(m_QoS.get_time_code(), -1, id, lchar);
-            cerr << this->basename() << " send tc" << m_QoS.get_time_code() << " at " << sc_time_stamp() << "\n";
+            s = symbol(node_QoS_port->get_time_slot(), -1, id, lchar);
+            cerr << this->basename() << " send tc" << node_QoS_port->get_time_slot() << " at " << sc_time_stamp() << "\n";
             have_time_code_to_send = false;
             wait(delay * s.t);
             fct_port->write_byte(direct, s);
@@ -139,7 +153,7 @@ void node::sender()
                 fct_port->write_byte(direct, s);
                 ready_to_write--;
             }
-            if (receiver_addr != -1 || m_QoS.can_send())
+            if (receiver_addr != -1 || can_send)
             {
                 if (!have_data_to_send && write_buf.nb_read(tmp_byte))
                 {

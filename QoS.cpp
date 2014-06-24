@@ -1,28 +1,28 @@
 #include "QoS.h"
-#include "defs.h"
-
-QoS::QoS(sc_module_name mn, int id, int scheduling, vector<vector<bool> > st)
+#include "node.h"
+QoS::QoS(sc_module_name mn, node* parent_node, int scheduling, vector<vector<bool> > st)
     : sc_module(mn), scheduling(scheduling), schedule_table(st)
 {
     init();
+    id = parent_node->id;
     epoch_size = st.size();
+    QoS_node_port(*parent_node);
 }
-
-QoS::QoS(sc_module_name mn, int id, int scheduling)
+///TODO: delegating constructors
+QoS::QoS(sc_module_name mn, node* parent_node, int scheduling)
     : sc_module(mn), scheduling(scheduling)
 {
     init();
+    id = parent_node->id;
+    QoS_node_port(*parent_node);
 }
-QoS::QoS()
-{
-    scheduling = 0;
-    init();
-}
+
+QoS::QoS() {}
 
 void QoS::init()
 {
     cur_time = 0;
-    m_tc_begin_time = sc_time(0, SC_NS);
+
     mark_h = false;
     time_h = false;
 
@@ -36,35 +36,32 @@ void QoS::init()
     sensitive << time_code_event;
 }
 
-bool QoS::can_send()
+void QoS::new_time_slot()
 {
-    if (scheduling == 0)
-        return true;
-    return schedule_table[id][cur_time % epoch_size];
+    if (scheduling != 0)
+    if (schedule_table[id][cur_time % epoch_size]) 
+        QoS_node_port->unban_sending();
+    else
+        QoS_node_port->ban_sending();
 }
 
 void QoS::change_time()
 {
-//TODO: add notification about beginning of a new time slot
     while (true)
     {
         wait();
         if (scheduling == 2)
-        {
-            change_time_scheduling2();
-        }
+            sync_v2();
         else 
-        {
-            change_time_scheduling1();
-        }
+            sync_v1();
     }
 }
 
-void QoS::change_time_scheduling1()
+void QoS::sync_v1()
 {
     if (mark_h && !time_h)
     {
-        eop.notify(SC_ZERO_TIME);
+        new_time_slot();
         mark_h = false;
         cur_time = received_time;
         if (m_tc_begin_time != SC_ZERO_TIME)
@@ -77,7 +74,7 @@ void QoS::change_time_scheduling1()
     {
         time_h = true;
         cur_time++;
-        eop.notify(SC_ZERO_TIME);
+        new_time_slot();
         m_tc_begin_time = sc_time_stamp();
     }
     if (time_h && mark_h)
@@ -91,7 +88,7 @@ void QoS::change_time_scheduling1()
     time_code_event.notify(m_t_tc);
 }
 
-void QoS::change_time_scheduling2()
+void QoS::sync_v2()
 {
     if (mark_h)
     {
@@ -104,20 +101,20 @@ void QoS::change_time_scheduling2()
             time_code_event.notify(m_t_tc);
             return;
         }
-        if (cur_time == epoch - 1)
+        if (cur_time == epoch_size - 1)
         {
-            eop.notify(SC_ZERO_TIME);
+            new_time_slot();
             cur_time = 0;
             m_t_te = sc_time_stamp() - m_e_begin_time;
-            m_t_tc = m_t_te / epoch;
+            m_t_tc = m_t_te / epoch_size;
             m_tc_begin_time = sc_time_stamp();
             m_e_begin_time = sc_time_stamp();
             time_code_event.notify(m_t_tc);
         }
         else if (cur_time == 0)
         {
-            m_t_tc += (sc_time_stamp() - m_e_begin_time) / epoch;
-            m_t_te = m_t_tc * epoch;
+            m_t_tc += (sc_time_stamp() - m_e_begin_time) / epoch_size;
+            m_t_te = m_t_tc * epoch_size;
             time_code_event.cancel();
             time_code_event.notify(m_t_tc - (sc_time_stamp() - m_e_begin_time));
         }
@@ -131,22 +128,23 @@ void QoS::change_time_scheduling2()
     {
         cur_time++;
         m_tc_begin_time = sc_time_stamp();
-        if (cur_time == epoch)
+        if (cur_time == epoch_size)
         {
             cur_time = 0;
             m_e_begin_time = sc_time_stamp();
         }
-        eop.notify(SC_ZERO_TIME);
+        new_time_slot();
     }
     time_code_event.notify(m_t_tc);
 }
 
-void QoS::got_time_code(int time)
+void QoS::got_time_code(int time_code)
 {
-    received_time = time;
+    received_time = cur_time;
     mark_h = true; 
     time_code_event.notify();
 }
+
 sc_time QoS::get_tc()
 {
     return m_t_tc;
@@ -157,7 +155,7 @@ sc_time QoS::get_te()
     return m_t_te;
 }
 
-int QoS::get_time_code()
+int QoS::get_time_slot()
 {
     return cur_time;
 }
