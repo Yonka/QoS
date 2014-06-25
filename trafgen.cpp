@@ -3,51 +3,39 @@
 #include "ctime"
 #include <vector>
 
-trafgen::trafgen(sc_module_name mn, int param = 1, sc_time delay = sc_time(0, SC_NS)) : sc_module(mn), runs(param), delay(delay)
+trafgen::trafgen(sc_module_name mn, int dest_id, int packets_num = 1, sc_time delay = sc_time(0, SC_NS)) : sc_module(mn), dest_id(dest_id), runs(packets_num), delay(delay)
 {
-    packet_size = 1022;
     srand((unsigned int) time(0));
 
     SC_THREAD(gen_event);
-    sensitive << send_next;
+    sensitive << gen_next_event;
     
-    SC_METHOD(send_byte);
+    SC_METHOD(send_packet);
     dont_initialize();
-    sensitive << send;
+    sensitive << send_event;
 }
 
 void trafgen::gen_event()
 {
     for (int r = 0; r < runs; r++)
     {
-        success = false;
         packet.push_back(EOP_SYMBOL);
-        for (int i = 0; i < packet_size; i++)
+        for (int i = 0; i < PACKET_SIZE; i++)
         {
             packet.push_back((sc_uint<8>)rand() % 254 + 1);
         }
-        while (!success)
-        {
-            send.notify(SC_ZERO_TIME);
-            wait();
-//TODO : vector -> sc_vector(?) and use empty event(if exists Oo)
-            if (packet.empty())
-                break;
-        }
+        packet.push_back(dest_id);
+        send_event.notify(SC_ZERO_TIME);
+        wait();
     }
 }
 
-void trafgen::send_byte()
+void trafgen::send_packet()
 {
-//    cout << "send " << x << '\n';
+    trafgen_node_port->write_packet(&packet);
+}
 
-    //////////////////////////////////////////////////////////////////////////
-    //TODO:rename event
-    if (out_port->write(&packet))
-    {
-        success = true;
-        send_next.notify(SC_ZERO_TIME); 
-    }
-    else 
-        send_next.notify(delay); 
+void trafgen::new_packet_request()
+{
+    gen_next_event.notify(SC_ZERO_TIME);
 }

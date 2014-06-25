@@ -9,13 +9,25 @@
 #include "time_manager.h"
 using namespace std;
 
-vector<vector<int> > schedule_table;
+vector<vector<bool> > schedule_table;
 vector<vector<int> > traf;
 vector<sc_time> delays;
 int table_size;
 int scheduling;
 vector<int> GV;
 int stat_n, stat_m, stat_k;
+
+char* make_name(string s, int n)
+{
+    stringstream sstm;
+    sstm.str(std::string());
+    sstm << s << n;
+    string st = sstm.str();
+    char* a = new char[st.size()];
+    a[st.size()] = 0;
+    memcpy(a, st.c_str(), st.size());
+    return a;
+}
 
 int sc_main(int argc, char* argv[])
 {
@@ -44,32 +56,30 @@ int sc_main(int argc, char* argv[])
     for (int i = 0; i < nodes; i++)
     {
         double delay_traf, delay_node;
-        string name;
-        int direction;
-        in >> delay_traf >> delay_node >> direction >> name;
+        int dest_id;
+        in >> delay_traf >> delay_node >> dest_id;
         delays.push_back(sc_time(delay_node, SC_NS));
-        char* a = new char[name.size()];
-        a[name.size()] = 0;
-        memcpy(a,name.c_str(), name.size());
-        trafgen *t0 = new trafgen("trafgen", PACKETS, sc_time(delay_traf, SC_NS));
-        node *n0 = new node(a, i, direction, sc_time(delay_node, SC_NS));
-        (*t0).out_port(*n0);
-        t.push_back(t0);
-        n.push_back(n0);
+        string name_node_tmp = "node_";
+        string name_trafgen_tmp = "trafgen_";
+        char* name_node = make_name(name_node_tmp, i);
+        char* name_trafgen = make_name(name_trafgen_tmp, i);
+        trafgen *t_ = new trafgen(name_node, dest_id, PACKETS, sc_time(delay_traf, SC_NS));
+        node *n_ = new node(name_trafgen, i, dest_id, sc_time(delay_node, SC_NS));
+        (*n_).set_scheduling(scheduling, schedule_table);
+        (*t_).trafgen_node_port(*n_);
+        (*n_).node_trafgen_port(*t_);
+        t.push_back(t_);
+        n.push_back(n_);
     }
-    int num_routers;
-    in >> num_routers;
-    int delay_router;
-    in >> delay_router;
+    int num_routers, delay_router;
+    in >> num_routers >> delay_router;
     vector<routing_switch*> routers;
     int ports;
     for (int i = 0; i < num_routers; i++)
     {
-        string name;
-        in >> ports >> name;
-        char* a = new char[name.size()];
-        a[name.size()] = 0;
-        memcpy(a,name.c_str(), name.size());
+        string name_router_tmp = "router_";
+        in >> ports;
+        char* name_router = make_name(name_router_tmp, i);
         vector<int> table;
         int tmp;
         for (int i = 0; i < nodes; i++)
@@ -77,7 +87,7 @@ int sc_main(int argc, char* argv[])
             in >> tmp;
             table.push_back(tmp);
         }
-        routing_switch* r = new routing_switch(a, i, ports, sc_time(delay_router, SC_NS), table);
+        routing_switch* r = new routing_switch(name_router, i, ports, sc_time(delay_router, SC_NS), table);
         routers.push_back(r);
     }
     for (int i = 0; i < num_routers; i++)
@@ -87,15 +97,15 @@ int sc_main(int argc, char* argv[])
         for (int j = 0; j < ports; j++)
         {
             in >> a >> b;
-            sc_port<conn_I>* port = (*routers[i]).fct_port[a];
+            sc_port<data_if>* port = (*routers[i]).fct_port[a];
             (*port)(*n[b]);
-            (*n[b]).fct_port(*routers[i]);
+            (*n[b]).data_port(*routers[i]);
             (*n[b]).direct = a;
         }
         for (int j = 0; j < (*routers[i]).fct_port.size() - ports; j++)
         {
             in >> c >> a >> b;
-            sc_port<conn_I>* port = (*routers[i]).fct_port[a];
+            sc_port<data_if>* port = (*routers[i]).fct_port[a];
             (*port)(*routers[c]);
             (*routers[i]).direct[a] = b;
         }

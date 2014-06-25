@@ -1,16 +1,8 @@
 #include "QoS.h"
 #include "node.h"
-QoS::QoS(sc_module_name mn, node* parent_node, int scheduling, vector<vector<bool> > st)
-    : sc_module(mn), scheduling(scheduling), schedule_table(st)
-{
-    init();
-    id = parent_node->id;
-    epoch_size = st.size();
-    QoS_node_port(*parent_node);
-}
-///TODO: delegating constructors
+
 QoS::QoS(sc_module_name mn, node* parent_node, int scheduling)
-    : sc_module(mn), scheduling(scheduling)
+    : sc_module(mn), m_scheduling(scheduling)
 {
     init();
     id = parent_node->id;
@@ -19,27 +11,33 @@ QoS::QoS(sc_module_name mn, node* parent_node, int scheduling)
 
 QoS::QoS() {}
 
+void QoS::set_scheduling(int scheduling, vector<vector<bool> > schedule_table)
+{
+    m_scheduling = scheduling;
+    m_scheduleTable = schedule_table;
+    m_epochSize = schedule_table.size();
+}
+
 void QoS::init()
 {
-    cur_time = 0;
+    m_currentTimeSlot = 0;
 
-    mark_h = false;
-    time_h = false;
+    m_mark = false;
+    m_timer = false;
 
     m_t_tc = sc_time(TICK, SC_NS);
-    m_t_te = m_t_tc * schedule_table.size();
-    m_e_begin_time = SC_ZERO_TIME;
-    m_tc_begin_time = SC_ZERO_TIME;
-    time_code_event.notify(m_t_tc);
+    m_t_te = m_t_tc * m_scheduleTable.size();
+    m_e_beginTime = SC_ZERO_TIME;
+    m_tc_beginTime = SC_ZERO_TIME;
+    m_timeCodeEvent.notify(m_t_tc); ///WTF?
 
     SC_THREAD(change_time);
-    sensitive << time_code_event;
+    sensitive << m_timeCodeEvent;
 }
 
 void QoS::new_time_slot()
 {
-    if (scheduling != 0)
-    if (schedule_table[id][cur_time % epoch_size]) 
+    if (m_scheduleTable[id][m_currentTimeSlot % m_epochSize]) 
         QoS_node_port->unban_sending();
     else
         QoS_node_port->ban_sending();
@@ -50,99 +48,99 @@ void QoS::change_time()
     while (true)
     {
         wait();
-        if (scheduling == 2)
-            sync_v2();
-        else 
+        if (m_scheduling == 1)
             sync_v1();
+        else if (m_scheduling == 2)
+            sync_v2();
     }
 }
 
 void QoS::sync_v1()
 {
-    if (mark_h && !time_h)
+    if (m_mark && !m_timer)
     {
         new_time_slot();
-        mark_h = false;
-        cur_time = received_time;
-        if (m_tc_begin_time != SC_ZERO_TIME)
-            m_t_tc = sc_time_stamp() - m_tc_begin_time;
-        m_tc_begin_time = sc_time_stamp();
-        time_code_event.notify(m_t_tc);
+        m_mark = false;
+        m_currentTimeSlot = m_receivedTimeCode;
+        if (m_tc_beginTime != SC_ZERO_TIME)
+            m_t_tc = sc_time_stamp() - m_tc_beginTime;
+        m_tc_beginTime = sc_time_stamp();
+        m_timeCodeEvent.notify(m_t_tc);
         return;
     }
-    if (sc_time_stamp() == m_tc_begin_time + m_t_tc) 
+    if (sc_time_stamp() == m_tc_beginTime + m_t_tc) 
     {
-        time_h = true;
-        cur_time++;
+        m_timer = true;
+        m_currentTimeSlot++;
         new_time_slot();
-        m_tc_begin_time = sc_time_stamp();
+        m_tc_beginTime = sc_time_stamp();
     }
-    if (time_h && mark_h)
+    if (m_timer && m_mark)
     {
-        m_t_tc += sc_time_stamp() - m_tc_begin_time;
-        time_code_event.cancel();
-        cur_time = received_time;
-        time_h = false; 
-        mark_h = false;
+        m_t_tc += sc_time_stamp() - m_tc_beginTime;
+        m_timeCodeEvent.cancel();
+        m_currentTimeSlot = m_receivedTimeCode;
+        m_timer = false; 
+        m_mark = false;
     }
-    time_code_event.notify(m_t_tc);
+    m_timeCodeEvent.notify(m_t_tc);
 }
 
 void QoS::sync_v2()
 {
-    if (mark_h)
+    if (m_mark)
     {
-        mark_h = false;
-        if (m_e_begin_time == SC_ZERO_TIME)
+        m_mark = false;
+        if (m_e_beginTime == SC_ZERO_TIME)
         {
-            m_e_begin_time = sc_time_stamp();
-            m_tc_begin_time = sc_time_stamp();
-            time_code_event.cancel();
-            time_code_event.notify(m_t_tc);
+            m_e_beginTime = sc_time_stamp();
+            m_tc_beginTime = sc_time_stamp();
+            m_timeCodeEvent.cancel();
+            m_timeCodeEvent.notify(m_t_tc);
             return;
         }
-        if (cur_time == epoch_size - 1)
+        if (m_currentTimeSlot == m_epochSize - 1)
         {
             new_time_slot();
-            cur_time = 0;
-            m_t_te = sc_time_stamp() - m_e_begin_time;
-            m_t_tc = m_t_te / epoch_size;
-            m_tc_begin_time = sc_time_stamp();
-            m_e_begin_time = sc_time_stamp();
-            time_code_event.notify(m_t_tc);
+            m_currentTimeSlot = 0;
+            m_t_te = sc_time_stamp() - m_e_beginTime;
+            m_t_tc = m_t_te / m_epochSize;
+            m_tc_beginTime = sc_time_stamp();
+            m_e_beginTime = sc_time_stamp();
+            m_timeCodeEvent.notify(m_t_tc);
         }
-        else if (cur_time == 0)
+        else if (m_currentTimeSlot == 0)
         {
-            m_t_tc += (sc_time_stamp() - m_e_begin_time) / epoch_size;
-            m_t_te = m_t_tc * epoch_size;
-            time_code_event.cancel();
-            time_code_event.notify(m_t_tc - (sc_time_stamp() - m_e_begin_time));
+            m_t_tc += (sc_time_stamp() - m_e_beginTime) / m_epochSize;
+            m_t_te = m_t_tc * m_epochSize;
+            m_timeCodeEvent.cancel();
+            m_timeCodeEvent.notify(m_t_tc - (sc_time_stamp() - m_e_beginTime));
         }
         else
         {
-            time_code_event.notify(m_t_tc - (sc_time_stamp() - m_tc_begin_time));
+            m_timeCodeEvent.notify(m_t_tc - (sc_time_stamp() - m_tc_beginTime));
         }
         return;
     }
-    if (sc_time_stamp() == m_tc_begin_time + m_t_tc) 
+    if (sc_time_stamp() == m_tc_beginTime + m_t_tc) 
     {
-        cur_time++;
-        m_tc_begin_time = sc_time_stamp();
-        if (cur_time == epoch_size)
+        m_currentTimeSlot++;
+        m_tc_beginTime = sc_time_stamp();
+        if (m_currentTimeSlot == m_epochSize)
         {
-            cur_time = 0;
-            m_e_begin_time = sc_time_stamp();
+            m_currentTimeSlot = 0;
+            m_e_beginTime = sc_time_stamp();
         }
         new_time_slot();
     }
-    time_code_event.notify(m_t_tc);
+    m_timeCodeEvent.notify(m_t_tc);
 }
 
 void QoS::got_time_code(int time_code)
 {
-    received_time = cur_time;
-    mark_h = true; 
-    time_code_event.notify();
+    m_receivedTimeCode = m_currentTimeSlot;
+    m_mark = true; 
+    m_timeCodeEvent.notify();
 }
 
 sc_time QoS::get_tc()
@@ -157,5 +155,5 @@ sc_time QoS::get_te()
 
 int QoS::get_time_slot()
 {
-    return cur_time;
+    return m_currentTimeSlot;
 }

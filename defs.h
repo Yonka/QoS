@@ -1,8 +1,9 @@
 #ifndef DEFS_H
 #define DEFS_H
-#include <vector>
 
 #include <stdio.h>
+
+#include <vector>
 
 using namespace std;
 
@@ -11,6 +12,7 @@ using namespace std;
 #define TICK 500000
 #define SIM_TIME 64
 #define PACKETS 20000
+#define PACKET_SIZE 1022
 typedef double tick_value_type;
 
 extern vector<sc_time> delays;

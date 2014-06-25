@@ -1,7 +1,6 @@
-#ifndef ROUTER_H
-#define ROUTER_H
-#include "my_interfaces.h"
-#include "defs.h"
+#ifndef ROUTING_SWITCH_H
+#define ROUTING_SWITCH_H
+
 #include "systemc.h"
 #include <algorithm>
 #include <set>
@@ -9,9 +8,12 @@
 #include <ctime>
 #include <queue>
 
+#include "data_if.h"
+#include "defs.h"
+
 using namespace std;
 
-class routing_switch : public sc_module, public conn_I
+class routing_switch : public sc_module, public data_if
 {
 private:
     int ports;
@@ -63,7 +65,7 @@ public:
     SC_HAS_PROCESS(routing_switch);
     routing_switch(sc_module_name mn, int id, int ports, sc_time delay, vector<int> table);
 
-    vector<sc_port<conn_I>*> fct_port;   // output ports
+    vector<sc_port<data_if>*> fct_port;   // output ports
 
     virtual void write_byte(int num, symbol s);
 

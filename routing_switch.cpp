@@ -17,7 +17,7 @@ routing_switch::routing_switch(sc_module_name mn, int id,int ports, sc_time dela
 
 void routing_switch::init()
 {
-    std::srand ( unsigned ( std::time(0) ) );
+    std::srand (unsigned(std::time(0)));
     cur_time = -1;
     time_source = 0;
     address_destination.resize(ports);
@@ -49,8 +49,8 @@ void routing_switch::init()
     {
         queue<symbol> t;
         data_buffer.push_back(t);
-        time_buffer.push_back(symbol(0,0,0,nchar));
-        fct_port.push_back(new sc_port<conn_I>);
+        time_buffer.push_back(symbol(0, 0, 0, nchar));
+        fct_port.push_back(new sc_port<data_if>);
     }
 }
 

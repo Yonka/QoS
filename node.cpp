@@ -1,12 +1,11 @@
 #include "node.h"
 
-node::node(sc_module_name mn, int id, int addr, sc_time delay = sc_time(0, SC_NS)) 
-    : sc_module(mn), id(id), address(addr), delay(delay), write_buf(4000), read_buf(4000)
+node::node(sc_module_name mn, int id, int dest_id, sc_time delay = sc_time(0, SC_NS)) 
+    : sc_module(mn), id(id), dest_id(dest_id), delay(delay), write_buf(4000), read_buf(4000)
 {
     m_QoS = new QoS("QoS", this, 0); 
     node_QoS_port(*m_QoS);
     ready_to_write = 0;
-    can_send = true;
     processed = 0;
     have_time_code_to_send = false;
     have_fct_to_send = false;
@@ -16,7 +15,7 @@ node::node(sc_module_name mn, int id, int addr, sc_time delay = sc_time(0, SC_NS
     
     SC_THREAD(sender);
     dont_initialize();
-    sensitive << eop << fct_event << r_sender;
+    sensitive << eop << fct_event << repeat_sender;
     
     SC_METHOD(fct_delayed);
     dont_initialize();
@@ -29,12 +28,16 @@ void node::init()
     eop.notify(SC_ZERO_TIME);
 }
 
-bool node::write(std::vector<sc_uint<8> >* packet)
+void node::set_scheduling(int scheduling, vector<vector<bool> > schedule_table)
+{
+    m_QoS->set_scheduling(scheduling, schedule_table);
+}
+
+bool node::write_packet(std::vector<sc_uint<8> >* packet)
 {
 //    cout << "res " << data << " at " << sc_time_stamp() << "\n";
-    if (write_buf.num_free() < (*packet).size() + 1)   
+    if (write_buf.num_free() < (*packet).size())   
         return false;
-    write_buf.write(address);
     while (!(*packet).empty())
     {
         write_buf.write((*packet).back());
@@ -129,15 +132,15 @@ void node::sender()
             cerr << this->basename() << " send tc" << node_QoS_port->get_time_slot() << " at " << sc_time_stamp() << "\n";
             have_time_code_to_send = false;
             wait(delay * s.t);
-            fct_port->write_byte(direct, s);
+            data_port->write_byte(direct, s);
         }
         if (have_fct_to_send)
         {
             have_fct_to_send = false;
-            fct_port->fct(direct);
+            data_port->fct(direct);
             wait(FCT_SIZE * delay);
         }
-        if (address != id)
+        if (dest_id != id)
         {
             if (have_data_to_send && ready_to_write !=0)
             {
@@ -145,12 +148,13 @@ void node::sender()
                 if (tmp_byte == EOP_SYMBOL)
                 {
                     receiver_addr = -1;
+                    node_trafgen_port->new_packet_request();
                     eop.notify(SC_ZERO_TIME);
                 }
-                //            cerr << this->basename() << " send " << tmp_byte << " at " << sc_time_stamp() << "\n";
+//              cerr << this->basename() << " send " << tmp_byte << " at " << sc_time_stamp() << "\n";
                 have_data_to_send = false;
                 wait(delay * s.t);
-                fct_port->write_byte(direct, s);
+                data_port->write_byte(direct, s);
                 ready_to_write--;
             }
             if (receiver_addr != -1 || can_send)
@@ -166,6 +170,6 @@ void node::sender()
             }
         }
         if (have_fct_to_send || have_time_code_to_send || (have_data_to_send && ready_to_write != 0))
-            r_sender.notify(SC_ZERO_TIME);
+            repeat_sender.notify(SC_ZERO_TIME);
     }
 }
