@@ -100,6 +100,7 @@ void node::new_time_code(int value)
     cerr << id << " send tc\n";
 //    if (scheduling == 1)
 //        cur_time = value;
+    m_QoS->got_time_code(value);
     have_time_code_to_send = true;
     eop.notify();
 }

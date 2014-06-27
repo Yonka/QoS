@@ -13,7 +13,7 @@ void time_manager::tick()
     {
         if (m_tick_value != 1 && m_tick_value != 2)
             m_time_master_node->new_time_code(m_tick_value);
-        m_tick_value++;
+        m_tick_value = (m_tick_value + 1) % 64;
         if (scheduling == 2 )
             wait(m_time_master_node->node_QoS_port->get_te());
         else wait(m_time_master_node->node_QoS_port->get_tc());

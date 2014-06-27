@@ -15,21 +15,22 @@ void QoS::set_scheduling(int scheduling, vector<vector<bool> > schedule_table)
 {
     m_scheduling = scheduling;
     m_scheduleTable = schedule_table;
-    m_epochSize = schedule_table.size();
+    m_epochSize = schedule_table[0].size();
+    m_t_te = m_t_tc * m_epochSize;
 }
 
 void QoS::init()
 {
     m_currentTimeSlot = 0;
+    m_started = false;
 
     m_mark = false;
     m_timer = false;
 
     m_t_tc = sc_time(TICK, SC_NS);
-    m_t_te = m_t_tc * m_scheduleTable.size();
     m_e_beginTime = SC_ZERO_TIME;
     m_tc_beginTime = SC_ZERO_TIME;
-    m_timeCodeEvent.notify(m_t_tc); ///WTF?
+//    m_timeCodeEvent.notify(m_t_tc); ///WTF?
 
     SC_THREAD(change_time);
     sensitive << m_timeCodeEvent;
@@ -59,19 +60,22 @@ void QoS::sync_v1()
 {
     if (m_mark && !m_timer)
     {
-        new_time_slot();
         m_mark = false;
         m_currentTimeSlot = m_receivedTimeCode;
-        if (m_tc_beginTime != SC_ZERO_TIME)
+        new_time_slot();
+        if (m_started)
             m_t_tc = sc_time_stamp() - m_tc_beginTime;
+        else 
+            m_started = true;
         m_tc_beginTime = sc_time_stamp();
+        m_timeCodeEvent.cancel();
         m_timeCodeEvent.notify(m_t_tc);
         return;
     }
     if (sc_time_stamp() == m_tc_beginTime + m_t_tc) 
     {
         m_timer = true;
-        m_currentTimeSlot++;
+        m_currentTimeSlot = (m_currentTimeSlot + 1) % m_epochSize;
         new_time_slot();
         m_tc_beginTime = sc_time_stamp();
     }
@@ -91,23 +95,25 @@ void QoS::sync_v2()
     if (m_mark)
     {
         m_mark = false;
-        if (m_e_beginTime == SC_ZERO_TIME)
+        if (!m_started)
         {
+            m_started = true;
             m_e_beginTime = sc_time_stamp();
             m_tc_beginTime = sc_time_stamp();
             m_timeCodeEvent.cancel();
             m_timeCodeEvent.notify(m_t_tc);
+            new_time_slot();
             return;
         }
         if (m_currentTimeSlot == m_epochSize - 1)
         {
-            new_time_slot();
             m_currentTimeSlot = 0;
             m_t_te = sc_time_stamp() - m_e_beginTime;
             m_t_tc = m_t_te / m_epochSize;
             m_tc_beginTime = sc_time_stamp();
             m_e_beginTime = sc_time_stamp();
             m_timeCodeEvent.notify(m_t_tc);
+            new_time_slot();
         }
         else if (m_currentTimeSlot == 0)
         {
@@ -138,7 +144,7 @@ void QoS::sync_v2()
 
 void QoS::got_time_code(int time_code)
 {
-    m_receivedTimeCode = m_currentTimeSlot;
+    m_receivedTimeCode = time_code;
     m_mark = true; 
     m_timeCodeEvent.notify();
 }
