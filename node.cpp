@@ -15,7 +15,7 @@ node::node(sc_module_name mn, int id, int dest_id, sc_time delay = sc_time(0, SC
     
     SC_THREAD(sender);
     dont_initialize();
-    sensitive << m_eop << m_fct_event << m_repeat_sender;
+    sensitive << m_fct_event << m_run_sender;
     
     SC_METHOD(fctDelayed);
     dont_initialize();
@@ -25,7 +25,7 @@ node::node(sc_module_name mn, int id, int dest_id, sc_time delay = sc_time(0, SC
 void node::init()
 {
     m_have_fct_to_send = true;
-    m_eop.notify(SC_ZERO_TIME);
+    m_run_sender.notify(SC_ZERO_TIME);
 }
 
 void node::set_scheduling(int scheduling, vector<vector<bool> > schedule_table)
@@ -43,7 +43,7 @@ bool node::write_packet(std::vector<sc_uint<8> >* packet)
         m_write_buf.write((*packet).back());
         (*packet).pop_back();
     }
-    m_eop.notify();
+    m_run_sender.notify();
 //    cout << this->basename() << " have new packet " << sc_time_stamp() << '\n';
     return true;    
 }
@@ -74,7 +74,7 @@ void node::write_byte(int num, symbol s)
         m_read_buf.write(s.data);
         m_processed++;
     }
-    m_eop.notify(SC_ZERO_TIME);
+    m_run_sender.notify(SC_ZERO_TIME);
     if (m_processed == 8) 
     {
         m_have_fct_to_send = true;
@@ -100,19 +100,19 @@ void node::newTimeCode(int value)
     cerr << id << " send tc\n";
     m_QoS->got_time_code(value);
     m_have_time_code_to_send = true;
-    m_eop.notify();
+    m_run_sender.notify();
 }
 
 void node::ban_sending()
 {
     m_can_send = false;
-    m_eop.notify(SC_ZERO_TIME);
+    m_run_sender.notify(SC_ZERO_TIME);
 }
 
 void node::unban_sending()
 {
     m_can_send = true;
-    m_eop.notify(SC_ZERO_TIME);
+    m_run_sender.notify(SC_ZERO_TIME);
 }
 
 void node::sender()
@@ -147,7 +147,7 @@ void node::sender()
                 {
                     receiver_addr = -1;
                     node_trafgen_port->new_packet_request();
-                    m_eop.notify(SC_ZERO_TIME);
+                    m_run_sender.notify(SC_ZERO_TIME);
                 }
 //              cerr << this->basename() << " send " << tmp_byte << " at " << sc_time_stamp() << "\n";
                 m_have_data_to_send = false;
@@ -168,6 +168,6 @@ void node::sender()
             }
         }
         if (m_have_fct_to_send || m_have_time_code_to_send || (m_have_data_to_send && m_ready_to_write != 0))
-            m_repeat_sender.notify(SC_ZERO_TIME);
+            m_run_sender.notify(SC_ZERO_TIME);
     }
 }

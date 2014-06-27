@@ -23,7 +23,7 @@ class node:
     friend class time_manager;
 
 public:
-    int id, direct;
+    int id, direct;                             // node id, node binded to direct port
     QoS* m_QoS;
     sc_port<data_if> data_port;
     sc_port<node_trafgen_if> node_trafgen_port;
@@ -32,7 +32,7 @@ public:
 private:
     sc_fifo<sc_uint<8> > m_write_buf;
     sc_uint<8> m_tmp_byte;
-    sc_event m_eop, m_fct_event, m_fct_delayed_event, m_repeat_sender;
+    sc_event m_fct_event, m_fct_delayed_event, m_run_sender;
     sc_time m_delay;
     int m_received_time, m_dest_id;
     bool m_have_time_code_to_send, m_have_data_to_send, m_have_fct_to_send, m_can_send;
