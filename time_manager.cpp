@@ -9,13 +9,13 @@ time_manager::time_manager(sc_module_name mn, node* m_time_master_node) : sc_mod
 
 void time_manager::tick()
 {
-    while (scheduling != 0)
+    int m_scheduling = m_time_master_node->node_QoS_port->get_scheduling();
+    m_t_tc = (m_scheduling == 2) ? m_time_master_node->node_QoS_port->get_te() :m_time_master_node->node_QoS_port->get_tc();
+    while (m_scheduling != 0)
     {
-        if (m_tick_value != 1 && m_tick_value != 2)
-            m_time_master_node->new_time_code(m_tick_value);
+//        if (m_tick_value != 1 && m_tick_value != 2)
+        m_time_master_node->newTimeCode(m_tick_value);
         m_tick_value = (m_tick_value + 1) % 64;
-        if (scheduling == 2 )
-            wait(m_time_master_node->node_QoS_port->get_te());
-        else wait(m_time_master_node->node_QoS_port->get_tc());
+            wait(m_t_tc);
     }
 }

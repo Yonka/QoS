@@ -15,60 +15,63 @@ using namespace std;
 
 class routing_switch : public sc_module, public data_if
 {
-private:
-    int ports;
-    int cur_time;
-    int time_source;                        // where time come from
-    vector<queue<symbol> > data_buffer;     // input buffer
-    vector<symbol> time_buffer;             // buffer for tc
-    sc_time delay;
-
-    vector<int> address_destination;        // if port is sending data, then destination address, -1 otherwise 
-    vector<bool> ready_to_redirect;         // port has actual data to redirect
-    vector<int> processed;                  // how many symbols passed through this port (shouldn't we send fct?)
-
-    vector<int> address_source;             // if port is receiving data, then source address, -1 otherwise 
-    vector<int> ready_to_send;              // is an output port ready to send data (received fct)
-
-    vector<int> out_proc;                   // is something redirecting now from this port: 0 - nothing, 1 - lchar, 2 - fct, 3 - nchar
-    vector<pair<int, sc_time> > in_proc;    // is something redirecting to this port: -//- and finishing time
-
-    set<int> redirecting_data, redirecting_fct;
-    vector<int> routing_table;
-    map<int, sc_time> freed_ports;          // map of ports - num + sending begin-time
-    vector<bool> dest_for_tc, dest_for_fct; // need to send TC 
-    sc_event new_data, free_port;           // we have data for redirection or any out-port received fct
-    sc_event fct_delayed_event;    
-
-    void fct_delayed();
-
-    void redirect();
-
-    void redirect_close();
-
-    void redirect_time();
-
-    void redirect_fct();
-
-    void redirect_data();
-
-    bool inner_connect(int x);
-
-    void init_fct();
-
-    void init();
-
 public:
     int id;
     vector<int> direct;
-
-    SC_HAS_PROCESS(routing_switch);
-    routing_switch(sc_module_name mn, int id, int ports, sc_time delay, vector<int> table);
-
     vector<sc_port<data_if>*> fct_port;   // output ports
+
+private:
+    int m_ports;
+    int m_cur_time;
+    int m_time_source;                          // where time comes from
+    vector<queue<symbol> > m_data_buffer;       // buffer for FCT
+    vector<symbol> m_time_buffer;               // buffer for TC
+    sc_time m_delay;
+
+    vector<int> m_address_destination;          // if port is sending data, then destination address, -1 otherwise 
+    vector<bool> m_ready_to_redirect;           // port has actual data to redirect
+    vector<int> m_processed;                    // how many symbols passed through this port (shouldn't we send fct?)
+
+    vector<int> m_address_source;               // if port is receiving data, then source address, -1 otherwise 
+    vector<int> m_ready_to_send;                // is an output port ready to send data (received fct)
+
+    vector<int> m_out_proc;                     // is something redirecting now from this port: 0 - nothing, 1 - lchar, 2 - fct, 3 - nchar
+    vector<pair<int, sc_time> > m_in_proc;      // is something redirecting to this port: -//- and finishing time
+
+    set<int> m_redirecting_data, m_redirecting_fct;
+    vector<int> m_routing_table;
+    map<int, sc_time> m_freed_ports;            // map of ports - num + sending begin-time
+    vector<bool> m_dest_for_tc, m_dest_for_fct; // receivers of TC & FCT
+    sc_event m_new_data, m_free_port;           // we have data for redirection or any out-port received fct
+    sc_event m_fct_delayed_event;    
+
+public:
+    SC_HAS_PROCESS(routing_switch);
+
+    routing_switch(sc_module_name mn, int id, int ports, sc_time delay, vector<int> table);
 
     virtual void write_byte(int num, symbol s);
 
     virtual void fct(int num);
+
+private:
+    void fctDelayed();
+
+    void redirect();
+
+    void redirectClose();
+
+    void redirectTime();
+
+    void redirectFCT();
+
+    void redirectData();
+
+    bool innerConnect(int x);
+
+    void initFCT();
+
+    void init();
+
 };
 #endif

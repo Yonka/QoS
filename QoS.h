@@ -33,8 +33,6 @@ public:
 
     QoS();
 
-    void init();
-
     virtual void got_time_code(int time_code);           //node got tc = time
 
     virtual sc_time get_te();
@@ -42,10 +40,14 @@ public:
     virtual sc_time get_tc();
 
     virtual int get_time_slot();
+    
+    virtual int get_scheduling();
 
     void set_scheduling(int scheduling, vector<vector<bool> > schedule_table);
 
 private:
+    void init();
+
     void change_time();         
 
     void sync_v1();

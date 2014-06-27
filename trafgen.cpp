@@ -20,7 +20,7 @@ void trafgen::gen_event()
     for (int r = 0; r < runs; r++)
     {
         packet.push_back(EOP_SYMBOL);
-        for (int i = 0; i < PACKET_SIZE; i++)
+        for (int i = 0; i < PACKET_SIZE - 2; i++)
         {
             packet.push_back((sc_uint<8>)rand() % 254 + 1);
         }

@@ -12,10 +12,11 @@ private:
     sc_time m_t_tc;
     node* m_time_master_node;
 
-    void tick();
-
 public:
     SC_HAS_PROCESS(time_manager);
     time_manager(sc_module_name mn, node* m_time_master_node);
+
+private:
+    void tick();
 };
 #endif

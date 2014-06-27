@@ -12,11 +12,10 @@ using namespace std;
 #define TICK 500000
 #define SIM_TIME 64
 #define PACKETS 20000
-#define PACKET_SIZE 1022
+#define PACKET_SIZE 1024
 typedef double tick_value_type;
 
 extern vector<sc_time> delays;
-extern int scheduling;
 extern vector<int> GV; 
 extern vector<vector<int> > traf;
 extern int stat_n, stat_m, stat_k;
@@ -29,11 +28,11 @@ enum symbol_type
 
 struct symbol {
     int data;
-    int addr;
+    int address;
     int source;
     symbol_type t;
     symbol(){};
-    symbol(int data, int addr, int source, symbol_type t): data(data), addr(addr), source(source), t(t) {};
+    symbol(int data, int address, int source, symbol_type t): data(data), address(address), source(source), t(t) {};
 };
 
 

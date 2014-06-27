@@ -163,3 +163,8 @@ int QoS::get_time_slot()
 {
     return m_currentTimeSlot;
 }
+
+int QoS::get_scheduling()
+{
+    return m_scheduling;
+}

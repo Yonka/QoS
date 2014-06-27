@@ -30,14 +30,14 @@ public:
     sc_port<node_QoS_if> node_QoS_port;
 
 private:
-    sc_fifo<sc_uint<8> > write_buf;
-    sc_uint<8> tmp_byte;
-    sc_event eop, fct_event, fct_delayed_event, repeat_sender;
-    sc_time delay;
-    int received_time, dest_id;
-    bool have_time_code_to_send, have_data_to_send, have_fct_to_send, can_send;
-    sc_fifo<sc_uint<8> > read_buf;
-    int ready_to_write, processed;    
+    sc_fifo<sc_uint<8> > m_write_buf;
+    sc_uint<8> m_tmp_byte;
+    sc_event m_eop, m_fct_event, m_fct_delayed_event, m_repeat_sender;
+    sc_time m_delay;
+    int m_received_time, m_dest_id;
+    bool m_have_time_code_to_send, m_have_data_to_send, m_have_fct_to_send, m_can_send;
+    sc_fifo<sc_uint<8> > m_read_buf;
+    int m_ready_to_write, m_processed;    
 
 public:
     SC_HAS_PROCESS(node);
@@ -56,15 +56,13 @@ public:
 
     void init();
 
-    void set_scheduling(int scheduling);
-    
     void set_scheduling(int scheduling, vector<vector<bool> > schedule_table);
 
 private:
     void sender();
 
-    void fct_delayed();
+    void fctDelayed();
 
-    void new_time_code(int value);
+    void newTimeCode(int value);
 };
 #endif
