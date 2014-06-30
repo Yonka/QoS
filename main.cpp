@@ -55,16 +55,16 @@ int sc_main(int argc, char* argv[])
     vector<node *> n;
     for (int i = 0; i < nodes; i++)
     {
-        double delay_traf, delay_node;
+        double delay_node;
         int dest_id;
-        in >> delay_traf >> delay_node >> dest_id;
+        in >> delay_node >> dest_id;
         delays.push_back(sc_time(delay_node, SC_NS));
         string name_node_tmp = "node_";
         string name_trafgen_tmp = "trafgen_";
         char* name_node = make_name(name_node_tmp, i);
         char* name_trafgen = make_name(name_trafgen_tmp, i);
-        trafgen *t_ = new trafgen(name_node, dest_id, PACKETS, sc_time(delay_traf, SC_NS));
-        node *n_ = new node(name_trafgen, i, dest_id, sc_time(delay_node, SC_NS));
+        trafgen *t_ = new trafgen(name_trafgen, dest_id, PACKETS);
+        node *n_ = new node(name_node, i, dest_id, sc_time(delay_node, SC_NS));
         (*n_).set_scheduling(scheduling, schedule_table);
         (*t_).trafgen_node_port(*n_);
         (*n_).node_trafgen_port(*t_);
@@ -118,7 +118,7 @@ int sc_main(int argc, char* argv[])
     sc_start(SIM_TIME, SC_MS);
     int sum = 0;
     ofstream out;
-    out.open("result_suffle_stat0");
+    out.open("result1");
     out << scheduling << "\n";
     int k = 0;
     for (int i = 0; i < GV.size(); i++)

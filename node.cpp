@@ -1,7 +1,7 @@
 #include "node.h"
 
 node::node(sc_module_name mn, int id, int dest_id, sc_time delay = sc_time(0, SC_NS)) 
-    : sc_module(mn), id(id), m_dest_id(dest_id), m_delay(delay), m_write_buf(4000), m_read_buf(4000)
+    : sc_module(mn), id(id), m_dest_id(dest_id), m_delay(delay), m_out_buffer(4000), m_in_buffer(4000)
 {
     m_QoS = new QoS("QoS", this, 0); 
     node_QoS_port(*m_QoS);
@@ -33,14 +33,14 @@ void node::set_scheduling(int scheduling, vector<vector<bool> > schedule_table)
     m_QoS->set_scheduling(scheduling, schedule_table);
 }
 
-bool node::write_packet(std::vector<sc_uint<8> >* packet)
+bool node::write_packet(std::vector<int>* packet)
 {
 //    cout << "res " << data << " at " << sc_time_stamp() << "\n";
-    if (m_write_buf.num_free() < (*packet).size())   
+    if (m_out_buffer.num_free() < (*packet).size())   
         return false;
     while (!(*packet).empty())
     {
-        m_write_buf.write((*packet).back());
+        m_out_buffer.write((*packet).back());
         (*packet).pop_back();
     }
     m_run_sender.notify();
@@ -50,15 +50,15 @@ bool node::write_packet(std::vector<sc_uint<8> >* packet)
 
 void node::write_byte(int num, symbol s)
 {
-//    cerr << sc_time_stamp() << ": " << this->basename() << " received from " << s.sour << ": " << s.data <<"\n";
+//    cerr << sc_time_stamp() << ": " << this->basename() << " received from " << s.source << ": " << s.data <<"\n";
     if (s.t == nchar && s.data == EOP_SYMBOL)
     {
         stat_m++;
-        sc_uint<8> data;
+        int data;
         cerr << this-> basename() << " received package from "<< s.source<<": ";
         traf[id][s.source]++;
         GV[id]++;
-        while (m_read_buf.nb_read(data));
+        while (m_in_buffer.nb_read(data));
 //            cerr << data << " ";
         cerr << " at " << sc_time_stamp() << "\n";
         m_processed++;
@@ -71,7 +71,7 @@ void node::write_byte(int num, symbol s)
     else
     {
         stat_m++;
-        m_read_buf.write(s.data);
+        m_in_buffer.write(s.data);
         m_processed++;
     }
     m_run_sender.notify(SC_ZERO_TIME);
@@ -157,7 +157,7 @@ void node::sender()
             }
             if (receiver_addr != -1 || m_can_send)
             {
-                if (!m_have_data_to_send && m_write_buf.nb_read(m_tmp_byte))
+                if (!m_have_data_to_send && m_out_buffer.nb_read(m_tmp_byte))
                 {
                     m_have_data_to_send = true;
                     if (receiver_addr == -1) 

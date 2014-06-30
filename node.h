@@ -30,21 +30,22 @@ public:
     sc_port<node_QoS_if> node_QoS_port;
 
 private:
-    sc_fifo<sc_uint<8> > m_write_buf;
-    sc_uint<8> m_tmp_byte;
+    sc_fifo<int> m_out_buffer;
+    int m_tmp_byte;
     sc_event m_fct_event, m_fct_delayed_event, m_run_sender;
     sc_time m_delay;
     int m_received_time, m_dest_id;
-    bool m_have_time_code_to_send, m_have_data_to_send, m_have_fct_to_send, m_can_send;
-    sc_fifo<sc_uint<8> > m_read_buf;
-    int m_ready_to_write, m_processed;    
+    bool m_have_time_code_to_send, m_have_data_to_send, m_have_fct_to_send;
+    bool m_can_send;                    // is it allowed time-slot
+    sc_fifo<int> m_in_buffer;
+    int m_ready_to_write, m_processed;  // number of nchars we can send/received    
 
 public:
     SC_HAS_PROCESS(node);
 
     node(sc_module_name mn, int id, int dest_id, sc_time delay);
 
-    virtual bool write_packet(std::vector<sc_uint<8> >* packet);
+    virtual bool write_packet(std::vector<int>* packet);
 
     virtual void write_byte(int num, symbol s);
 
@@ -54,8 +55,6 @@ public:
 
     virtual void unban_sending();
 
-    void init();
-
     void set_scheduling(int scheduling, vector<vector<bool> > schedule_table);
 
 private:
@@ -64,5 +63,7 @@ private:
     void fctDelayed();
 
     void newTimeCode(int value);
+
+    void init();
 };
 #endif

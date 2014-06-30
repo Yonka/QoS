@@ -13,15 +13,15 @@ class QoS : public sc_module, public node_QoS_if
 {
 public:
     sc_port<QoS_node_if> QoS_node_port;
-    int id;                                 // node id
+    int id;                                                 // node id
 
 private:
     vector<vector<bool> > m_scheduleTable;
-    int m_scheduling;                         // 0 - without, 1 - first, 2 - second
-    bool m_mark, m_timer, m_started;                    // tick & timer handlers
-    sc_time m_t_tc, m_t_te, m_tc_beginTime, m_e_beginTime; //t_tc value, t_te value, interval beginning time, epoch beginning time
-    int m_currentTimeSlot, m_receivedTimeCode;            // current & received time-slot number
-    int m_epochSize;                         // number of time slots in epoch
+    int m_scheduling;                                       // 0 - without, 1 - first, 2 - second
+    bool m_mark, m_timer, m_started;                        // tick & timer handlers
+    sc_time m_t_tc, m_t_te, m_tc_beginTime, m_e_beginTime;  //t_tc value, t_te value, interval beginning time, epoch beginning time
+    int m_currentTimeSlot, m_receivedTimeCode;              // current & received time-slot number
+    int m_epochSize;                                        // number of time slots in epoch
     sc_event m_timeCodeEvent;
 
 public:
@@ -33,7 +33,7 @@ public:
 
     QoS();
 
-    virtual void got_time_code(int time_code);           //node got tc = time
+    virtual void got_time_code(int time_code);              //node got TC = time_code
 
     virtual sc_time get_te();
 

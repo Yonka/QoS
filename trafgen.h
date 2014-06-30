@@ -11,20 +11,24 @@ class trafgen:
 {
 public:
     sc_port<trafgen_node_if> trafgen_node_port;
-    std::vector<sc_uint<8> > packet;
-    sc_event send_event, gen_next_event;   //sending, prepare next packet
     int runs, dest_id;
-    sc_time delay;  //TODO: do we need this?
-    bool success;
 
+private:
+    std::vector<int> m_packet;
+    sc_event m_send_event, m_gen_next_event;   //sending, prepare next packet
+
+public:
     SC_HAS_PROCESS(trafgen);
-    trafgen(sc_module_name mn, int direction, int packets_num, sc_time delay);
 
-    void gen_event();
-
-    void send_packet();
+    trafgen(sc_module_name mn, int direction, int packets_num);
 
     virtual void new_packet_request();
+
+private:
+    void genEvent();
+
+    void sendPacket();
+
 };
 #endif
 

@@ -17,6 +17,8 @@ void QoS::set_scheduling(int scheduling, vector<vector<bool> > schedule_table)
     m_scheduleTable = schedule_table;
     m_epochSize = schedule_table[0].size();
     m_t_te = m_t_tc * m_epochSize;
+//    QoS_node_port->unban_sending();
+    new_time_slot();
 }
 
 void QoS::init()
@@ -30,7 +32,6 @@ void QoS::init()
     m_t_tc = sc_time(TICK, SC_NS);
     m_e_beginTime = SC_ZERO_TIME;
     m_tc_beginTime = SC_ZERO_TIME;
-//    m_timeCodeEvent.notify(m_t_tc); ///WTF?
 
     SC_THREAD(change_time);
     sensitive << m_timeCodeEvent;
@@ -66,7 +67,15 @@ void QoS::sync_v1()
         if (m_started)
             m_t_tc = sc_time_stamp() - m_tc_beginTime;
         else 
+        {
+            //////////////////////////////////////////////////////////////////////////
+            GV[id] = 0;
+            for (int i = 0; i < traf[id].size(); i++)
+                traf[id][i] = 0;
+            //////////////////////////////////////////////////////////////////////////
             m_started = true;
+            new_time_slot();
+        }
         m_tc_beginTime = sc_time_stamp();
         m_timeCodeEvent.cancel();
         m_timeCodeEvent.notify(m_t_tc);

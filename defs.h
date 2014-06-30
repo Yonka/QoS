@@ -10,10 +10,10 @@ using namespace std;
 #define FCT_SIZE 4
 #define EOP_SYMBOL 255
 #define TICK 500000
-#define SIM_TIME 64
+#define SIM_TIME 64.0005
 #define PACKETS 20000
 #define PACKET_SIZE 1024
-typedef double tick_value_type;
+//typedef double tick_value_type;
 
 extern vector<sc_time> delays;
 extern vector<int> GV; 
@@ -34,6 +34,4 @@ struct symbol {
     symbol(){};
     symbol(int data, int address, int source, symbol_type t): data(data), address(address), source(source), t(t) {};
 };
-
-
 #endif

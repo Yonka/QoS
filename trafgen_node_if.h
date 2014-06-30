@@ -5,6 +5,6 @@
 class trafgen_node_if : virtual public sc_interface
 {
 public:
-    virtual bool write_packet(std::vector<sc_uint<8> > *packet) = 0;
+    virtual bool write_packet(std::vector<int> *packet) = 0;
 };
 #endif
