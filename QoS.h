@@ -27,8 +27,6 @@ private:
 public:
     SC_HAS_PROCESS(QoS);
 
-    QoS(sc_module_name mn, node* parent_node, int scheduling, vector<vector<bool> > st);
-
     QoS(sc_module_name mn, node* parent_node, int scheduling);
 
     QoS();
@@ -50,9 +48,9 @@ private:
 
     void change_time();         
 
-    void sync_v1();
+    void sync_algorythm_1();
 
-    void sync_v2();
+    void sync_algorythm_2();
 
     void new_time_slot();
 };  

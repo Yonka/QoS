@@ -8,8 +8,8 @@
 class time_manager : public sc_module
 {
 private:
-    int m_tick_value;
-    sc_time m_t_tc;
+    int m_time_code_value;
+    sc_time m_tick_period;
     node* m_time_master_node;
 
 public:

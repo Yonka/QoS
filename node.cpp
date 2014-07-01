@@ -57,7 +57,7 @@ void node::write_byte(int num, symbol s)
         int data;
         cerr << this-> basename() << " received package from "<< s.source<<": ";
         traf[id][s.source]++;
-        GV[id]++;
+        packets_count[id]++;
         while (m_in_buffer.nb_read(data));
 //            cerr << data << " ";
         cerr << " at " << sc_time_stamp() << "\n";
@@ -79,6 +79,7 @@ void node::write_byte(int num, symbol s)
     {
         m_have_fct_to_send = true;
         m_processed = 0;
+        m_run_sender.notify(SC_ZERO_TIME);
     }
 }
 

@@ -13,10 +13,15 @@ using namespace std;
 #define SIM_TIME 64.0005
 #define PACKETS 20000
 #define PACKET_SIZE 1024
+
+#define WITHOUT_SCHEDULING 0
+#define ALGORYTHM_1 1
+#define ALGORYTHM_2 2
+
 //typedef double tick_value_type;
 
 extern vector<sc_time> delays;
-extern vector<int> GV; 
+extern vector<int> packets_count; 
 extern vector<vector<int> > traf;
 extern int stat_n, stat_m, stat_k;
 

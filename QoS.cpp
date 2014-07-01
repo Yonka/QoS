@@ -50,14 +50,14 @@ void QoS::change_time()
     while (true)
     {
         wait();
-        if (m_scheduling == 1)
-            sync_v1();
-        else if (m_scheduling == 2)
-            sync_v2();
+        if (m_scheduling == ALGORYTHM_1)
+            sync_algorythm_1();
+        else if (m_scheduling == ALGORYTHM_2)
+            sync_algorythm_2();
     }
 }
 
-void QoS::sync_v1()
+void QoS::sync_algorythm_1()
 {
     if (m_mark && !m_timer)
     {
@@ -69,7 +69,7 @@ void QoS::sync_v1()
         else 
         {
             //////////////////////////////////////////////////////////////////////////
-            GV[id] = 0;
+            packets_count[id] = 0;
             for (int i = 0; i < traf[id].size(); i++)
                 traf[id][i] = 0;
             //////////////////////////////////////////////////////////////////////////
@@ -99,13 +99,18 @@ void QoS::sync_v1()
     m_timeCodeEvent.notify(m_t_tc);
 }
 
-void QoS::sync_v2()
+void QoS::sync_algorythm_2()
 {
     if (m_mark)
     {
         m_mark = false;
         if (!m_started)
         {
+            //////////////////////////////////////////////////////////////////////////
+            packets_count[id] = 0;
+            for (int i = 0; i < traf[id].size(); i++)
+                traf[id][i] = 0;
+            //////////////////////////////////////////////////////////////////////////
             m_started = true;
             m_e_beginTime = sc_time_stamp();
             m_tc_beginTime = sc_time_stamp();

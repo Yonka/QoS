@@ -18,7 +18,7 @@ class routing_switch : public sc_module, public data_if
 public:
     int id;
     vector<int> direct;
-    vector<sc_port<data_if>*> fct_port;   // output ports
+    vector<sc_port<data_if>*> data_port;   // output ports
 
 private:
     int m_ports;

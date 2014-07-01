@@ -50,7 +50,7 @@ void routing_switch::init()
         queue<symbol> t;
         m_data_buffer.push_back(t);
         m_time_buffer.push_back(symbol(0, 0, 0, nchar));
-        fct_port.push_back(new sc_port<data_if>);
+        data_port.push_back(new sc_port<data_if>);
     }
 }
 
@@ -137,7 +137,7 @@ void routing_switch::redirectClose()
             m_in_proc[m_address_destination[i]].first = 0;
             m_out_proc[i] = 0;
 
-            (*fct_port[m_address_destination[i]])->write_byte(direct[m_address_destination[i]], m_data_buffer[i].front());
+            (*data_port[m_address_destination[i]])->write_byte(direct[m_address_destination[i]], m_data_buffer[i].front());
             m_processed[i]++;
             if (m_processed[i] == 8)
             {
@@ -181,7 +181,7 @@ void routing_switch::redirectTime()
             {
                 m_in_proc[j].first = 0;
                 m_dest_for_tc[j] = false;
-                (*fct_port[j])->write_byte(direct[j], m_time_buffer[m_time_source]);
+                (*data_port[j])->write_byte(direct[j], m_time_buffer[m_time_source]);
             }              
         }
         bool freed = true;
@@ -205,7 +205,7 @@ void routing_switch::redirectFCT()
         {
             m_in_proc[*i].first = 2;
             m_in_proc[*i].second = sc_time_stamp() + delays[*i] * FCT_SIZE;
-            (*fct_port[*i])->fct(direct[*i]);
+            (*data_port[*i])->fct(direct[*i]);
             i++;
             continue;
         }
