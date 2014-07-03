@@ -25,7 +25,7 @@ public:
     virtual void new_packet_request();
 
 private:
-    void genPacket();
+    void genEvent();
 
     void sendPacket();
 

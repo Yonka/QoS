@@ -30,15 +30,14 @@ public:
     sc_port<node_QoS_if> node_QoS_port;
 
 private:
-    sc_fifo<int> m_out_buffer;
-    int m_tmp_byte;
-    sc_event m_fct_event, m_fct_delayed_event, m_run_sender;
+    int m_tmpByte;
+    sc_event m_fctEvent, m_fctDelayedEvent, m_runSender;
     sc_time m_delay;
-    int m_received_time, m_dest_id;
-    bool m_have_time_code_to_send, m_have_data_to_send, m_have_fct_to_send;
-    bool m_can_send;                    // is it allowed time-slot
-    sc_fifo<int> m_in_buffer;
-    int m_ready_to_write, m_processed;  // number of nchars we can send/received    
+    int m_receivedTime, m_destID;
+    bool m_haveTimeTodeToSend, m_haveDataToSend, m_haveFctToSend;
+    bool m_canSend;                    // is it allowed time-slot
+    sc_fifo<int> m_inBuffer, m_outBuffer;
+    int m_readyToWrite, m_processed;  // number of nchars we can send/received    
 
 public:
     SC_HAS_PROCESS(node);
@@ -47,9 +46,9 @@ public:
 
     virtual bool write_packet(std::vector<int>* packet);
 
-    virtual void write_byte(int num, symbol s);
+    virtual void write_byte(int inPortID, symbol symb);
 
-    virtual void fct(int num);
+    virtual void fct(int inPortID);
 
     virtual void ban_sending();
 

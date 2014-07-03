@@ -17,14 +17,23 @@ using namespace std;
 #define WITHOUT_SCHEDULING 0
 #define ALGORYTHM_1 1
 #define ALGORYTHM_2 2
-
-//typedef double tick_value_type;
+#define FREE_PORT -1
 
 extern vector<sc_time> delays;
 extern vector<int> packets_count; 
 extern vector<vector<int> > traf;
 extern int stat_n, stat_m, stat_k;
 
+struct redirectingSymbolType{
+enum : int 
+{
+    nothing,
+    timeCode,
+    fct,
+    informSymbol
+};
+
+};
 enum symbol_type
 {
     lchar = 14,
@@ -35,8 +44,8 @@ struct symbol {
     int data;
     int address;
     int source;
-    symbol_type t;
+    symbol_type symbolType; ///!!!!
     symbol(){};
-    symbol(int data, int address, int source, symbol_type t): data(data), address(address), source(source), t(t) {};
+    symbol(int data, int address, int source, symbol_type symbolType): data(data), address(address), source(source), symbolType(symbolType) {};
 };
 #endif

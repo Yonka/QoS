@@ -59,7 +59,7 @@ void QoS::change_time()
 
 void QoS::sync_algorythm_1()
 {
-    if (m_mark && !m_timer)
+    if (m_mark && !m_timer)      //m_hasReceivedTime
     {
         m_mark = false;
         m_currentTimeSlot = m_receivedTimeCode;
@@ -68,11 +68,11 @@ void QoS::sync_algorythm_1()
             m_t_tc = sc_time_stamp() - m_tc_beginTime;
         else 
         {
-            //////////////////////////////////////////////////////////////////////////
+            //////////counting statistics
             packets_count[id] = 0;
             for (int i = 0; i < traf[id].size(); i++)
                 traf[id][i] = 0;
-            //////////////////////////////////////////////////////////////////////////
+            //////////counting statistics
             m_started = true;
             new_time_slot();
         }
@@ -106,11 +106,11 @@ void QoS::sync_algorythm_2()
         m_mark = false;
         if (!m_started)
         {
-            //////////////////////////////////////////////////////////////////////////
+            //////////counting statistics
             packets_count[id] = 0;
             for (int i = 0; i < traf[id].size(); i++)
                 traf[id][i] = 0;
-            //////////////////////////////////////////////////////////////////////////
+            //////////counting statistics
             m_started = true;
             m_e_beginTime = sc_time_stamp();
             m_tc_beginTime = sc_time_stamp();

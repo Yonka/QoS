@@ -7,7 +7,7 @@ trafgen::trafgen(sc_module_name mn, int dest_id, int packets_num = 1) : sc_modul
 {
     srand((unsigned int) time(0));
 
-    SC_THREAD(genPacket);
+    SC_THREAD(genEvent);
     sensitive << m_gen_next_event;
     
     SC_METHOD(sendPacket);
@@ -15,7 +15,7 @@ trafgen::trafgen(sc_module_name mn, int dest_id, int packets_num = 1) : sc_modul
     sensitive << m_send_event;
 }
 
-void trafgen::genPacket()
+void trafgen::genEvent()
 {
     for (int r = 0; r < runs; r++)
     {

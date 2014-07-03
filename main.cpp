@@ -59,27 +59,27 @@ int sc_main(int argc, char* argv[])
         int dest_id;
         in >> delay_node >> dest_id;
         delays.push_back(sc_time(delay_node, SC_NS));
-        string nameNodeS = "node_";
-        string nameTrafgenS = "trafgen_";
-        char* nameNodeC = make_name(nameNodeS, i);
-        char* nameTrafgenC = make_name(nameTrafgenS, i);
-        trafgen *trafgenUnit = new trafgen(nameTrafgenC, dest_id, PACKETS);
-        node *nodeUnit = new node(nameNodeC, i, dest_id, sc_time(delay_node, SC_NS));
+        string name_node_tmp = "node_";
+        string name_trafgen_tmp = "trafgen_";
+        char* name_node = make_name(name_node_tmp, i);
+        char* name_trafgen = make_name(name_trafgen_tmp, i);
+        trafgen *trafgenUnit = new trafgen(name_trafgen, dest_id, PACKETS);
+        node *nodeUnit = new node(name_node, i, dest_id, sc_time(delay_node, SC_NS));
         (*nodeUnit).set_scheduling(scheduling, schedule_table);
         (*trafgenUnit).trafgen_node_port(*nodeUnit);
         (*nodeUnit).node_trafgen_port(*trafgenUnit);
         trafgenVector.push_back(trafgenUnit);
         nodeVector.push_back(nodeUnit);
     }
-    int numRouters, delayRouter;
-    in >> numRouters >> delayRouter;
+    int num_routers, delay_router;
+    in >> num_routers >> delay_router;
     vector<routing_switch*> routerVector;
     int ports;
-    for (int i = 0; i < numRouters; i++)
+    for (int i = 0; i < num_routers; i++)
     {
-        string nameRouterS = "router_";
+        string name_router_tmp = "router_";
         in >> ports;
-        char* nameRouterC = make_name(nameRouterS, i);
+        char* name_router = make_name(name_router_tmp, i);
         vector<int> table;
         int tmp;
         for (int j = 0; j < nodes; j++)
@@ -87,17 +87,17 @@ int sc_main(int argc, char* argv[])
             in >> tmp;
             table.push_back(tmp);
         }
-        routing_switch* routerUnit = new routing_switch(nameRouterC, i, ports, sc_time(delayRouter, SC_NS), table);
+        routing_switch* routerUnit = new routing_switch(name_router, i, ports, sc_time(delay_router, SC_NS), table);
         routerVector.push_back(routerUnit);
     }
-    for (int i = 0; i < numRouters; i++)
+    for (int i = 0; i < num_routers; i++)
     {
         in >> ports;
         int a, b, c;
         for (int j = 0; j < ports; j++)
         {
             in >> a >> b;
-            sc_port<data_if>* port = (*routerVector[i]).data_port[a];
+            sc_port<data_if>* port = (*routerVector[i]).fct_port[a];
             (*port)(*nodeVector[b]);
             (*nodeVector[b]).data_port(*routerVector[i]);
             (*nodeVector[b]).direct = a;
@@ -105,7 +105,7 @@ int sc_main(int argc, char* argv[])
         for (int j = 0; j < (*routerVector[i]).fct_port.size() - ports; j++)
         {
             in >> c >> a >> b;
-            sc_port<data_if>* port = (*routerVector[i]).data_port[a];
+            sc_port<data_if>* port = (*routerVector[i]).fct_port[a];
             (*port)(*routerVector[c]);
             (*routerVector[i]).direct[a] = b;
         }

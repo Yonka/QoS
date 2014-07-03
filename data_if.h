@@ -6,7 +6,7 @@
 class data_if : virtual public sc_interface
 {
 public:
-    virtual void fct(int num) = 0;
-    virtual void write_byte(int num, symbol s) = 0;
+    virtual void fct(int inPortID) = 0;
+    virtual void write_byte(int inPortID, symbol symb) = 0;
 };
 #endif
