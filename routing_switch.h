@@ -23,26 +23,26 @@ public:
 private:
     int m_ports;
     int m_currentTime;
-    int m_timeSenderPortID;                          // where time comes from
-    vector<queue<symbol> > m_dataBuffer;       // buffer for FCT
-    vector<symbol> m_timeBuffer;               // buffer for TC
+    int m_timeSenderPortID;                     // where time comes from
+    vector<queue<symbol> > m_dataBuffer;        // buffer for informSymbol
+    vector<symbol> m_timeBuffer;                // buffer for timeCode
     sc_time m_delay;
 
-    vector<int> m_addressDestination;          // if port is sending data, then destination address, -1 otherwise 
-    vector<bool> m_readyToRedirect;           // port has actual data to redirect
+    vector<int> m_addressDestination;           // if port is sending data, then destination address, -1 otherwise 
+    vector<bool> m_readyToRedirect;             // port has actual data to redirect
     vector<int> m_processed;                    // how many symbols passed through this port (shouldn't we send fct?)
 
-    vector<int> m_addressSource;               // if port is receiving data, then source address, -1 otherwise 
-    vector<int> m_readyToSend;                // is an output port ready to send data (received fct)
+    vector<int> m_addressSource;                // if port is receiving data, then source address, -1 otherwise 
+    vector<int> m_readyToSend;                  // is an output port ready to send data (received fct)
 
-    vector<int> m_outProc;                     // is something redirecting now from this port: 0 - nothing, 1 - lchar, 2 - fct, 3 - nchar
-    vector<pair<int, sc_time> > m_inProc;      // is something redirecting to this port: -//- and finishing time
+    vector<int> m_outProc;                      // is something redirecting now from this port
+    vector<pair<int, sc_time> > m_inProc;       // first - is something redirecting to this port; 2 - finishing time
 
     set<int> m_redirectingData, m_redirectingFct;
     vector<int> m_routingTable;
-    map<int, sc_time> m_freedPorts;            // map of ports - num + sending begin-time
+    map<int, sc_time> m_freedPorts;             // map of ports - num + sending begin-time
     vector<bool> m_destForTimeCode, m_destForFct; // receivers of TC & FCT
-    sc_event m_newDataToSend, m_portFreed;           // we have data for redirection or any out-port received fct
+    sc_event m_newDataToSend, m_portFreed;      // we have data for redirection or any out-port received fct
     sc_event m_fctDelayedEvent;    
 
 public:

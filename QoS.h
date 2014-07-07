@@ -17,9 +17,9 @@ public:
 
 private:
     vector<vector<bool> > m_scheduleTable;
-    int m_scheduling;                                       // 0 - without, 1 - first, 2 - second
-    bool m_mark, m_timer, m_started;                        // tick & timer handlers
-    sc_time m_t_tc, m_t_te, m_tc_beginTime, m_e_beginTime;  //t_tc - смысл value, t_te value, interval beginning time, epoch beginning time
+    int m_scheduling;
+    bool m_hasReceivedTimeCode, m_timerHasFinished, m_gotFirstTimeCode;
+    sc_time m_t_tc, m_t_e, m_timeSlotBeginTime, m_epochBeginTime;  //t_tc - time-slot timer, t_te - epoch timer, time-slot beginning time, epoch beginning time
     int m_currentTimeSlot, m_receivedTimeCode;              // current & received time-slot number
     int m_epochSize;                                        // number of time slots in epoch
     sc_event m_timeCodeEvent;

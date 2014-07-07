@@ -113,7 +113,6 @@ void routing_switch::write_byte(int inPortID, symbol symb)
     }
 }
 
-//!!! t -> type
 void routing_switch::redirect()
 {
     redirectClose();           //free from data
@@ -145,7 +144,6 @@ void routing_switch::redirectClose()
                 m_redirectingFct.insert(i);
                 m_processed[i] = 0;
             }
-//!!! m_new_data - m_newDataToSend
             m_newDataToSend.notify(SC_ZERO_TIME);
             if (m_dataBuffer[i].front().data == EOP_SYMBOL)
             {
@@ -201,7 +199,7 @@ void routing_switch::redirectTime()
 
 void routing_switch::redirectFCT()
 {
-    for (set<int>::iterator i = m_redirectingFct.begin(); i != m_redirectingFct.end(); ) 
+    for (set<int>::iterator i = m_redirectingFct.begin(); i != m_redirectingFct.end();) 
     {
         if (m_inProc[*i].first == redirectingSymbolType::nothing)
         {

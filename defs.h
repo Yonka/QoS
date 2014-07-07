@@ -25,15 +25,15 @@ extern vector<vector<int> > traf;
 extern int stat_n, stat_m, stat_k;
 
 struct redirectingSymbolType{
-enum : int 
-{
-    nothing,
-    timeCode,
-    fct,
-    informSymbol
+    enum : int 
+    {
+        nothing,
+        timeCode,
+        fct,
+        informSymbol
+    };
 };
 
-};
 enum symbol_type
 {
     lchar = 14,
@@ -44,7 +44,7 @@ struct symbol {
     int data;
     int address;
     int source;
-    symbol_type symbolType; ///!!!!
+    symbol_type symbolType; 
     symbol(){};
     symbol(int data, int address, int source, symbol_type symbolType): data(data), address(address), source(source), symbolType(symbolType) {};
 };
