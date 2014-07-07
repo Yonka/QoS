@@ -31,10 +31,10 @@ public:
 
 private:
     int m_tmpByte;
-    sc_event m_fctEvent, m_fctDelayedEvent, m_runSender;
+    sc_event m_fctEvent, m_runSender;
     sc_time m_delay;
     int m_receivedTime, m_destID;
-    bool m_haveTimeTodeToSend, m_haveDataToSend, m_haveFctToSend;
+    bool m_haveTimeCodeToSend, m_haveDataToSend, m_haveFctToSend;
     bool m_canSend;                    // is it allowed time-slot
     sc_fifo<int> m_inBuffer, m_outBuffer;
     int m_readyToWrite, m_processed;  // number of nchars we can send/received    
@@ -58,8 +58,6 @@ public:
 
 private:
     void sender();
-
-    void fctDelayed();
 
     void newTimeCode(int value);
 

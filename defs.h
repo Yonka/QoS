@@ -17,6 +17,7 @@ using namespace std;
 #define WITHOUT_SCHEDULING 0
 #define ALGORYTHM_1 1
 #define ALGORYTHM_2 2
+
 #define FREE_PORT -1
 
 extern vector<sc_time> delays;

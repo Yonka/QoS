@@ -97,15 +97,15 @@ int sc_main(int argc, char* argv[])
         for (int j = 0; j < ports; j++)
         {
             in >> a >> b;
-            sc_port<data_if>* port = (*routerVector[i]).fct_port[a];
+            sc_port<data_if>* port = (*routerVector[i]).data_port[a];
             (*port)(*nodeVector[b]);
             (*nodeVector[b]).data_port(*routerVector[i]);
             (*nodeVector[b]).direct = a;
         }
-        for (int j = 0; j < (*routerVector[i]).fct_port.size() - ports; j++)
+        for (int j = 0; j < (*routerVector[i]).data_port.size() - ports; j++)
         {
             in >> c >> a >> b;
-            sc_port<data_if>* port = (*routerVector[i]).fct_port[a];
+            sc_port<data_if>* port = (*routerVector[i]).data_port[a];
             (*port)(*routerVector[c]);
             (*routerVector[i]).direct[a] = b;
         }
@@ -116,6 +116,9 @@ int sc_main(int argc, char* argv[])
 
 //    sc_start(0);
     sc_start(SIM_TIME, SC_MS);
+   
+    //////////counting statistics
+
     int sum = 0;
     ofstream out;
     out.open("result1");

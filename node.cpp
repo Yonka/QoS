@@ -7,7 +7,7 @@ node::node(sc_module_name mn, int id, int dest_id, sc_time delay = sc_time(0, SC
     node_QoS_port(*m_QoS);
     m_readyToWrite = 0;
     m_processed = 0;
-    m_haveTimeTodeToSend = false;
+    m_haveTimeCodeToSend = false;
     m_haveFctToSend = false;
     m_haveDataToSend = false;
 
@@ -16,10 +16,6 @@ node::node(sc_module_name mn, int id, int dest_id, sc_time delay = sc_time(0, SC
     SC_THREAD(sender);
     dont_initialize();
     sensitive << m_fctEvent << m_runSender;
-    
-    SC_METHOD(fctDelayed);
-    dont_initialize();
-    sensitive << m_fctDelayedEvent;
 }
 
 void node::init()
@@ -53,11 +49,14 @@ void node::write_byte(int inPortID, symbol symb)
 //    cerr << sc_time_stamp() << ": " << this->basename() << " received from " << s.source << ": " << s.data <<"\n";
     if (symb.symbolType == nchar && symb.data == EOP_SYMBOL)
     {
+        //////////counting statistics
         stat_m++;
-        int data;
-        cerr << this-> basename() << " received package from "<< symb.source<<": ";
         traf[id][symb.source]++;
         packets_count[id]++;
+        //////////counting statistics
+
+        int data;
+        cerr << this-> basename() << " received package from "<< symb.source<<": ";
         while (m_inBuffer.nb_read(data));
 //            cerr << data << " ";
         cerr << " at " << sc_time_stamp() << "\n";
@@ -65,12 +64,16 @@ void node::write_byte(int inPortID, symbol symb)
     }
     else if (symb.symbolType == lchar)
     {
+        //////////counting statistics
         stat_k++;
+        //////////counting statistics
         node_QoS_port->got_time_code(symb.data);
     }
     else
     {
+        //////////counting statistics
         stat_m++;
+        //////////counting statistics
         m_inBuffer.write(symb.data);
         m_processed++;
     }
@@ -84,22 +87,18 @@ void node::write_byte(int inPortID, symbol symb)
 
 void node::fct(int inPortID)
 {
-     m_fctDelayedEvent.notify(FCT_SIZE * m_delay);
-     stat_n++;
-}
-
-void node::fctDelayed()
-{
     m_readyToWrite = 8;
     m_fctEvent.notify();
-//    cerr << this->basename() << " received fct at " << sc_time_stamp() << "\n";
+     //////////counting statistics
+     stat_n++;
+     //////////counting statistics
 }
 
 void node::newTimeCode(int value)
 {
     cerr << id << " send tc\n";
     m_QoS->got_time_code(value);
-    m_haveTimeTodeToSend = true;
+    m_haveTimeCodeToSend = true;
     m_runSender.notify();
 }
 
@@ -121,22 +120,22 @@ void node::sender()
     while (true)
     {
         wait();
-        if (!(m_haveFctToSend || m_haveTimeTodeToSend || m_canSend || receiver_addr != -1))
+        if (!(m_haveFctToSend || m_haveTimeCodeToSend || m_canSend || receiver_addr != -1))
             continue;
         symbol s;
-        if (m_haveTimeTodeToSend) 
+        if (m_haveTimeCodeToSend) 
         {
             s = symbol(node_QoS_port->get_time_slot(), -1, id, lchar);
             cerr << this->basename() << " send TC" << node_QoS_port->get_time_slot() << " at " << sc_time_stamp() << "\n";
-            m_haveTimeTodeToSend = false;
+            m_haveTimeCodeToSend = false;
             wait(m_delay * s.symbolType);
             data_port->write_byte(direct, s);
         }
         if (m_haveFctToSend)
         {
             m_haveFctToSend = false;
-            data_port->fct(direct);
             wait(FCT_SIZE * m_delay);
+            data_port->fct(direct);
         }
         if (m_destID != id)
         {
@@ -167,7 +166,7 @@ void node::sender()
                     receiver_addr = -1;
             }
         }
-        if (m_haveFctToSend || m_haveTimeTodeToSend || (m_haveDataToSend && m_readyToWrite != 0))
+        if (m_haveFctToSend || m_haveTimeCodeToSend || (m_haveDataToSend && m_readyToWrite != 0))
             m_runSender.notify(SC_ZERO_TIME);
     }
 }
